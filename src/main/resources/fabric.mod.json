@@ -1,0 +1,43 @@
+{
+	"schemaVersion" : 1,
+
+	"id" : "sleepwarp",
+	"version" : "${version}",
+	"environment" : "*",
+
+	"name" : "SleepWarp",
+	"description" : "Speeds up time when sleeping instead of skipping directly to day.",
+	"license": "MPL 2.0",
+
+	"authors": [
+		{
+			"name": "thegiggitybyte",
+			"contact": {
+				"homepage": "https://discord.gg/UPKuVWgU4G",
+				"discord": "https://discord.gg/UPKuVWgU4G"
+			}
+		}
+	],
+
+	"contact": {
+		"homepage": "https://discord.gg/UPKuVWgU4G",
+		"discord": "https://discord.gg/UPKuVWgU4G",
+		"sources": "https://github.com/Giggitybyte/SleepWarp",
+		"issues": "https://github.com/Giggitybyte/SleepWarp/issues"
+	},
+
+	"entrypoints": {
+		"main": [
+			"me.thegiggitybyte.sleepwarp.SleepWarp"
+		]
+	},
+
+	"mixins" : [
+      "sleepwarp.mixins.json"
+	],
+
+	"depends" : {
+		"fabricloader" : ">=0.13.0",
+		"minecraft" : "1.18.x"
+	}
+}
