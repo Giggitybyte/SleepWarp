@@ -70,12 +70,16 @@ public abstract class ServerWorldMixin extends World {
         }
         
         // Calculate amount of ticks to add to time.
-        var awakeCount = sleepTracker.getTotal() - sleepingCount;
-        var playerPercentage = (awakeCount == 0) ? 1.0 : (double) sleepingCount / (double) awakeCount;
+        var curveScalar = SleepWarp.getConfig().getOrDefault("accelerationCurve", 0.2);
+        var maxTicksAdded = SleepWarp.getConfig().getOrDefault("maxTimeAdded", 60);
+        long ticksAdded = 0;
         
-        var accelerationCurve = SleepWarp.getConfig().getOrDefault("accelerationCurve", 0.2);
-        var maxTicksAdded = SleepWarp.getConfig().getOrDefault("maxTimeAdded", 59);
-        var ticksAdded = (long) (maxTicksAdded * (accelerationCurve * playerPercentage / (2.0 * accelerationCurve * playerPercentage - accelerationCurve - playerPercentage + 1.0)));
+        if (sleepTracker.getTotal() - sleepingCount > 0) {
+            var sleepingRatio = (double) sleepingCount / (double) sleepTracker.getTotal();
+            ticksAdded = (long) (maxTicksAdded * (curveScalar * sleepingRatio / (2.0 * curveScalar * sleepingRatio - curveScalar - sleepingRatio + 1.0)));
+        } else {
+            ticksAdded = maxTicksAdded;
+        }
         
         // Set time and notify players.
         this.worldProperties.setTimeOfDay(this.worldProperties.getTimeOfDay() + ticksAdded);
