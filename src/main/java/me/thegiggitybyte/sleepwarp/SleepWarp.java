@@ -20,14 +20,13 @@ public class SleepWarp implements ModInitializer {
     
     private String getDefaultConfig(String fileName) {
         return """
-                # Maximum amount of ticks that can be added to the time every server tick.
-                # In other words: this value determines the speed of time while sleeping.
-                # Valid: 1 - 2147483647 | Default: 59
-                maxTimeAdded=59
+                # Maximum amount of ticks that can be added to the time every server tick. In other words: the max speed of the time warp.
+                # Valid: 1 - 2147483647 | Default: 60
+                maxTimeAdded=60
                 
                 # Scales time warp speed in relation to the amount of players currently sleeping.
-                # Higher values will require more players to bring the warp up to full speed. Likewise, lower values will require fewer players.
-                # Valid: 0.01 - 1.0 | Default: 0.2
+                # Lower values will require more players to bring the warp up to full speed, and vice versa.
+                # Valid: 0.1 - 1.0 | Default: 0.2
                 accelerationCurve=0.2
                 
                 # When true, the 'playersSleepingPercentage' gamerule will be respected and a percentage of players must sleep to begin the time warp.
