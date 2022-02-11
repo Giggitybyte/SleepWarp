@@ -70,8 +70,8 @@ public abstract class ServerWorldMixin extends World {
         }
         
         // Calculate amount of ticks to add to time.
-        var curveScalar = SleepWarp.getConfig().getOrDefault("accelerationCurve", 0.2);
-        var maxTicksAdded = SleepWarp.getConfig().getOrDefault("maxTimeAdded", 60);
+        var curveScalar = Math.max(0.1, Math.min(1.0, SleepWarp.getConfig().getOrDefault("accelerationCurve", 0.2)));
+        var maxTicksAdded = Math.max(1, SleepWarp.getConfig().getOrDefault("maxTimeAdded", 60));
         long ticksAdded = 0;
         
         if (sleepTracker.getTotal() - sleepingCount > 0) {
