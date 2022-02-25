@@ -74,6 +74,15 @@ public abstract class ServerWorldMixin extends World {
         var doDaylightCycle = this.worldProperties.getGameRules().getBoolean(GameRules.DO_DAYLIGHT_CYCLE);
         var packet = new WorldTimeUpdateS2CPacket(this.getTime(), this.getTimeOfDay(), doDaylightCycle);
         this.getServer().getPlayerManager().sendToDimension(packet, this.getRegistryKey());
+    
+        // Simulate passage of time, if desired by user.
+        boolean shouldTickBlockEntities = SleepWarp.getConfig().getOrDefault("tickBlockEntities", false);
+        if (shouldTickBlockEntities) {
+            while (ticksAdded > 0) {
+                this.tickBlockEntities();
+                --ticksAdded;
+            }
+        }
         
         // Wake players if not night.
         if (this.worldProperties.getTimeOfDay() % 24000 < 12542) {

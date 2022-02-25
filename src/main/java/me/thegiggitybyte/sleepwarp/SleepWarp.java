@@ -29,6 +29,11 @@ public class SleepWarp implements ModInitializer {
                 # Valid: 0.1 - 1.0 | Default: 0.2
                 accelerationCurve=0.2
                 
+                # When true, block entities (e.g. furnaces, spawners, pistons) will be ticked at the same speed as the time warp to
+                # simulate the passage of time. This option can cause performance issues, especially on servers with high activity.
+                # Valid: true, false | Default: false
+                tickBlockEntities=false
+                
                 # When true, the 'playersSleepingPercentage' gamerule will be respected and a percentage of players must sleep to begin the time warp.
                 # When false, only one player will be required to begin accelerating time.
                 # Valid: true, false | Default: false
