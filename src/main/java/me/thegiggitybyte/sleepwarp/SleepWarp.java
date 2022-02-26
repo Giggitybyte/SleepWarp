@@ -35,8 +35,8 @@ public class SleepWarp implements ModInitializer {
                 # Valid: true, false | Default: false
                 tickBlockEntities=false
                 
-                # When true, chunks will be ticked at the same speed as the time warp to simulate the passage of time. Because chunk ticks are responsible
-                # for most of the world simulation, this option *will* cause lag on populated servers or servers with high chunk view distances.
+                # When true, chunks will be ticked at the same speed as the time warp to simulate the passage of time. Because chunk ticks are responsible for most
+                # of the world simulation (e.g. mob spawns, crop growth) this option *will* cause lag on populated servers or servers with high chunk view distances.
                 # Full list of affected parts of the world: https://minecraft.fandom.com/wiki/Tick#Chunk_tick
                 # For best performance with this option enabled, reduce maxTimeAdded above and download Lithium: https://modrinth.com/mod/lithium
                 tickChunks=false
