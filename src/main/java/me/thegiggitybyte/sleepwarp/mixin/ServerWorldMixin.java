@@ -77,9 +77,18 @@ public abstract class ServerWorldMixin extends World {
     
         // Simulate passage of time, if desired by user.
         boolean shouldTickBlockEntities = SleepWarp.getConfig().getOrDefault("tickBlockEntities", false);
-        if (shouldTickBlockEntities) {
+        boolean shouldTickChunks = SleepWarp.getConfig().getOrDefault("tickChunks", false);
+        
+        if (shouldTickChunks | shouldTickBlockEntities) {
             while (ticksAdded > 0) {
-                this.tickBlockEntities();
+                if (shouldTickChunks) {
+                    var chunkManager = ((ServerWorldAccessor) this).getChunkManager();
+                    chunkManager.tick(shouldKeepTicking);
+                }
+                
+                if (shouldTickBlockEntities)
+                    this.tickBlockEntities();
+                
                 --ticksAdded;
             }
         }

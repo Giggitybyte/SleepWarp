@@ -1,14 +1,16 @@
 {
-	"required": true,
-	"minVersion": "0.8",
-	"package": "me.thegiggitybyte.sleepwarp.mixin",
-	"compatibilityLevel": "JAVA_17",
-	"mixins": [
-		"ServerWorldAccessor",
-		"ServerWorldMixin",
-		"SleepManagerAccessor"
-	],
-	"injectors": {
-		"defaultRequire": 1
-	}
+  "required": true,
+  "minVersion": "0.8",
+  "compatibilityLevel": "JAVA_17",
+  "package": "me.thegiggitybyte.sleepwarp.mixin",
+
+  "mixins": [
+    "ServerWorldAccessor",
+    "ServerWorldMixin",
+    "SleepManagerAccessor"
+  ],
+
+  "injectors": {
+    "defaultRequire": 1
+  }
 }
