@@ -37,13 +37,13 @@ public class SleepWarp implements ModInitializer {
                 # When true, block entities (e.g. furnaces, spawners, pistons) will be ticked at the same rate as the time warp to simulate the passage of time.
                 # This feature can cause performance issues during the time warp, especially in worlds with high amounts of block entities.
                 # Valid: true, false | Default: false
-                tickBlockEntities=true
+                tickBlockEntities=false
                 
                 # When true, chunks will be ticked at the same rate as the time warp to simulate the passage of time. This is a demanding feature since a chunk tick
                 # is responsible for most of the world simulation (e.g. crop growth, fire spread, mob spawns). Servers with high player counts or high chunk view
                 # distances should decrease maxTimeAdded and download Lithium (https://modrinth.com/mod/lithium) for the best performance with this feature enabled.
                 # Valid: true, false | Default: false
-                tickChunks=true
+                tickChunks=false
                 """;
     }
 }
