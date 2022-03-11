@@ -7,7 +7,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.server.world.SleepManager;
 import net.minecraft.util.profiler.Profiler;
-import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.MutableWorldProperties;
@@ -31,8 +30,8 @@ public abstract class ServerWorldMixin extends World {
     @Shadow @Final private ServerWorldProperties worldProperties;
     @Shadow @Final private SleepManager sleepManager;
     
-    protected ServerWorldMixin(MutableWorldProperties properties, RegistryKey<World> registryRef, RegistryEntry<DimensionType> registryEntry, Supplier<Profiler> profiler, boolean isClient, boolean debugWorld, long seed) {
-        super(properties, registryRef, registryEntry, profiler, isClient, debugWorld, seed);
+    protected ServerWorldMixin(MutableWorldProperties properties, RegistryKey<World> registryRef, DimensionType dimensionType, Supplier<Profiler> profiler, boolean isClient, boolean debugWorld, long seed) {
+        super(properties, registryRef, dimensionType, profiler, isClient, debugWorld, seed);
     }
     
     @Shadow @NotNull public abstract MinecraftServer getServer();
@@ -46,7 +45,7 @@ public abstract class ServerWorldMixin extends World {
         if (sleepTracker.getSleeping() == 0) return;
         
         var sleepingCount = ((ServerWorldAccessor) this).getPlayers().stream()
-                .filter(PlayerEntity::canResetTimeBySleeping)
+                .filter(PlayerEntity::isSleepingLongEnough)
                 .count();
         if (sleepingCount == 0) return;
         
@@ -84,7 +83,7 @@ public abstract class ServerWorldMixin extends World {
             while (ticksAdded > 0) {
                 if (shouldTickChunks) {
                     var chunkManager = ((ServerWorldAccessor) this).getChunkManager();
-                    chunkManager.tick(shouldKeepTicking, true);
+                    chunkManager.tick(shouldKeepTicking);
                 }
                 
                 if (shouldTickBlockEntities)
