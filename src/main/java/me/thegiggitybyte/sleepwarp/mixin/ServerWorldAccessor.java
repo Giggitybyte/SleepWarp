@@ -12,7 +12,4 @@ import java.util.List;
 public interface ServerWorldAccessor {
     @Accessor("players")
     List<ServerPlayerEntity> getPlayers();
-    
-    @Accessor("chunkManager")
-    ServerChunkManager getChunkManager();
 }

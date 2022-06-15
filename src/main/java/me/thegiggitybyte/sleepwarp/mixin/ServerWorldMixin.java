@@ -31,9 +31,10 @@ public abstract class ServerWorldMixin extends World {
     @Shadow @Final private ServerWorldProperties worldProperties;
     @Shadow @Final private SleepManager sleepManager;
     
-    protected ServerWorldMixin(MutableWorldProperties properties, RegistryKey<World> registryRef, RegistryEntry<DimensionType> registryEntry, Supplier<Profiler> profiler, boolean isClient, boolean debugWorld, long seed) {
-        super(properties, registryRef, registryEntry, profiler, isClient, debugWorld, seed);
+    protected ServerWorldMixin(MutableWorldProperties properties, RegistryKey<World> registryRef, RegistryEntry<DimensionType> registryEntry, Supplier<Profiler> profiler, boolean isClient, boolean debugWorld, long seed, int maxChainedNeighborUpdates) {
+        super(properties, registryRef, registryEntry, profiler, isClient, debugWorld, seed, maxChainedNeighborUpdates);
     }
+    
     
     @Shadow @NotNull public abstract MinecraftServer getServer();
     @Shadow protected abstract void wakeSleepingPlayers();
@@ -83,7 +84,7 @@ public abstract class ServerWorldMixin extends World {
         if (shouldTickChunks | shouldTickBlockEntities) {
             while (ticksAdded > 0) {
                 if (shouldTickChunks) {
-                    var chunkManager = ((ServerWorldAccessor) this).getChunkManager();
+                    var chunkManager = this.getChunkManager();
                     chunkManager.tick(shouldKeepTicking, true);
                 }
                 
