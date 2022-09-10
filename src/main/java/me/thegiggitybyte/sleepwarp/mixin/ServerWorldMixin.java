@@ -44,17 +44,17 @@ public abstract class ServerWorldMixin extends World {
     @Inject(method = "tick", at = @At(value = "FIELD", target = "Lnet/minecraft/server/world/ServerWorld;allPlayersSleeping:Z"))
     private void trySleepWarp(BooleanSupplier shouldKeepTicking, CallbackInfo ci) {
         // Pre-warp check.
-        var totalCount = this.players.size();
-        var sleepingCount = this.players.stream().filter(player -> !player.isSpectator() && player.isSleepingLongEnough()).count();
+        int totalCount = this.players.size();
+        long sleepingCount = this.players.stream().filter(player -> !player.isSpectator() && player.isSleepingLongEnough()).count();
         if (sleepingCount == 0) return;
         
         // Calculate amount of ticks to add to time.
-        var accelerationCurve = Math.max(0.1, Math.min(1.0, SleepWarp.getConfig().getOrDefault("accelerationCurve", 0.2)));
-        var maxTicksAdded = Math.max(1, SleepWarp.getConfig().getOrDefault("maxTimeAdded", 60));
+        double accelerationCurve = Math.max(0.1, Math.min(1.0, SleepWarp.getConfig().getOrDefault("accelerationCurve", 0.2)));
+        int maxTicksAdded = Math.max(1, SleepWarp.getConfig().getOrDefault("maxTimeAdded", 60));
         long ticksAdded = 0;
         
         if (totalCount - sleepingCount > 0) {
-            var sleepingRatio = (double) sleepingCount / (double) totalCount;
+            double sleepingRatio = (double) sleepingCount / (double) totalCount;
             ticksAdded = (long) (maxTicksAdded * (accelerationCurve * sleepingRatio / (2.0 * accelerationCurve * sleepingRatio - accelerationCurve - sleepingRatio + 1.0)));
         } else {
             ticksAdded = maxTicksAdded;
@@ -63,8 +63,8 @@ public abstract class ServerWorldMixin extends World {
         // Set time and update clients.
         this.worldProperties.setTimeOfDay(this.worldProperties.getTimeOfDay() + ticksAdded);
         
-        var doDaylightCycle = this.worldProperties.getGameRules().getBoolean(GameRules.DO_DAYLIGHT_CYCLE);
-        var packet = new WorldTimeUpdateS2CPacket(this.getTime(), this.getTimeOfDay(), doDaylightCycle);
+        boolean doDaylightCycle = this.worldProperties.getGameRules().getBoolean(GameRules.DO_DAYLIGHT_CYCLE);
+        WorldTimeUpdateS2CPacket packet = new WorldTimeUpdateS2CPacket(this.getTime(), this.getTimeOfDay(), doDaylightCycle);
         this.getServer().getPlayerManager().sendToDimension(packet, this.getRegistryKey());
     
         // Simulate passage of time, if desired by user.

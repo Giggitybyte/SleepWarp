@@ -1,10 +1,9 @@
 plugins {
-    id 'fabric-loom' version '0.11-SNAPSHOT'
-    id 'io.github.juuxel.loom-quiltflower' version '1.6.0'
+    id 'fabric-loom' version '0.7-SNAPSHOT'
 }
 
-sourceCompatibility = JavaVersion.VERSION_17
-targetCompatibility = JavaVersion.VERSION_17
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
 
 archivesBaseName = project.archives_base_name
 version = "${project.mod_version}+${project.minecraft_version}"
@@ -25,7 +24,7 @@ processResources {
 }
 
 tasks.withType(JavaCompile).configureEach {
-    it.options.release = 17
+    it.options.release = 8
 }
 
 java {
