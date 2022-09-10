@@ -4,6 +4,8 @@ import me.thegiggitybyte.sleepwarp.SleepWarp;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.packet.s2c.play.WorldTimeUpdateS2CPacket;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerChunkManager;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.server.world.SleepManager;
 import net.minecraft.util.profiler.Profiler;
@@ -22,6 +24,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
@@ -35,6 +38,8 @@ public abstract class ServerWorldMixin extends World {
     }
     
     @Shadow @NotNull public abstract MinecraftServer getServer();
+    @Shadow public abstract List<ServerPlayerEntity> getPlayers();
+    @Shadow public abstract ServerChunkManager getChunkManager();
     @Shadow protected abstract void wakeSleepingPlayers();
     @Shadow protected abstract void resetWeather();
     
@@ -44,7 +49,7 @@ public abstract class ServerWorldMixin extends World {
         var sleepTracker = (SleepManagerAccessor) this.sleepManager;
         if (sleepTracker.getSleeping() == 0) return;
         
-        var sleepingCount = ((ServerWorldAccessor) this).getPlayers().stream()
+        var sleepingCount = this.getPlayers().stream()
                 .filter(PlayerEntity::isSleepingLongEnough)
                 .count();
         if (sleepingCount == 0) return;
@@ -82,7 +87,7 @@ public abstract class ServerWorldMixin extends World {
         if (shouldTickChunks | shouldTickBlockEntities) {
             while (ticksAdded > 0) {
                 if (shouldTickChunks) {
-                    var chunkManager = ((ServerWorldAccessor) this).getChunkManager();
+                    var chunkManager = this.getChunkManager();
                     chunkManager.tick(shouldKeepTicking);
                 }
                 
