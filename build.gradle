@@ -3,6 +3,11 @@ plugins {
     id 'io.github.juuxel.loom-quiltflower' version '1.7.2'
 }
 
+repositories {
+    maven { url = "https://maven.isxander.dev/releases" }
+    maven { url "https://maven.terraformersmc.com/releases/"}
+}
+
 sourceCompatibility = JavaVersion.VERSION_17
 targetCompatibility = JavaVersion.VERSION_17
 
@@ -14,6 +19,14 @@ dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation include(fabricApi.module('fabric-screen-api-v1', project.fabric_version))
+    modImplementation include(fabricApi.module('fabric-key-binding-api-v1', project.fabric_version))
+    modImplementation include(fabricApi.module('fabric-lifecycle-events-v1', project.fabric_version))
+
+    modImplementation "dev.isxander:yet-another-config-lib:${project.yacl_version}"
+    modImplementation("com.terraformersmc:modmenu:${project.mod_menu_version}"){
+        exclude group: "net.fabricmc.fabric-api"
+    }
 }
 
 processResources {

@@ -3,12 +3,13 @@ package me.thegiggitybyte.sleepwarp.mixin;
 import me.thegiggitybyte.sleepwarp.SleepWarp;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.packet.s2c.play.WorldTimeUpdateS2CPacket;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.server.world.SleepManager;
 import net.minecraft.util.profiler.Profiler;
-import net.minecraft.util.registry.RegistryEntry;
-import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.MutableWorldProperties;
 import net.minecraft.world.World;
@@ -23,18 +24,19 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 @Mixin(ServerWorld.class)
 public abstract class ServerWorldMixin extends World {
     @Shadow @Final private ServerWorldProperties worldProperties;
+    @Shadow @Final List<ServerPlayerEntity> players;
     @Shadow @Final private SleepManager sleepManager;
     
     protected ServerWorldMixin(MutableWorldProperties properties, RegistryKey<World> registryRef, RegistryEntry<DimensionType> registryEntry, Supplier<Profiler> profiler, boolean isClient, boolean debugWorld, long seed, int maxChainedNeighborUpdates) {
         super(properties, registryRef, registryEntry, profiler, isClient, debugWorld, seed, maxChainedNeighborUpdates);
     }
-    
     
     @Shadow @NotNull public abstract MinecraftServer getServer();
     @Shadow protected abstract void wakeSleepingPlayers();
@@ -46,21 +48,18 @@ public abstract class ServerWorldMixin extends World {
         var sleepTracker = (SleepManagerAccessor) this.sleepManager;
         if (sleepTracker.getSleeping() == 0) return;
         
-        var sleepingCount = ((ServerWorldAccessor) this).getPlayers().stream()
+        var sleepingCount = this.players.stream()
                 .filter(PlayerEntity::canResetTimeBySleeping)
                 .count();
         if (sleepingCount == 0) return;
-        
-        boolean shouldUseSleepPercentage = SleepWarp.getConfig().getOrDefault("useSleepPercentage", false);
-        if (shouldUseSleepPercentage) {
-            var percentage = this.getGameRules().getInt(GameRules.PLAYERS_SLEEPING_PERCENTAGE);
-            boolean canWarpTime = sleepingCount >= this.sleepManager.getNightSkippingRequirement(percentage);
-            if (canWarpTime == false) return;
-        }
+    
+        var percentage = this.getGameRules().getInt(GameRules.PLAYERS_SLEEPING_PERCENTAGE);
+        var canWarpTime = sleepingCount >= this.sleepManager.getNightSkippingRequirement(percentage);
+        if (canWarpTime == false) return;
         
         // Calculate amount of ticks to add to time.
-        var accelerationCurve = Math.max(0.1, Math.min(1.0, SleepWarp.getConfig().getOrDefault("accelerationCurve", 0.2)));
-        var maxTicksAdded = Math.max(1, SleepWarp.getConfig().getOrDefault("maxTimeAdded", 60));
+        var accelerationCurve = Math.max(0.1, Math.min(1.0, SleepWarp.getConfig().get("acceleration_curve").getAsDouble()));
+        var maxTicksAdded = Math.max(1, SleepWarp.getConfig().get("max_ticks_added").getAsInt());
         long ticksAdded = 0;
         
         if (sleepTracker.getTotal() - sleepingCount > 0) {
@@ -76,30 +75,20 @@ public abstract class ServerWorldMixin extends World {
         var doDaylightCycle = this.worldProperties.getGameRules().getBoolean(GameRules.DO_DAYLIGHT_CYCLE);
         var packet = new WorldTimeUpdateS2CPacket(this.getTime(), this.getTimeOfDay(), doDaylightCycle);
         this.getServer().getPlayerManager().sendToDimension(packet, this.getRegistryKey());
-    
-        // Simulate passage of time, if desired by user.
-        boolean shouldTickBlockEntities = SleepWarp.getConfig().getOrDefault("tickBlockEntities", false);
-        boolean shouldTickChunks = SleepWarp.getConfig().getOrDefault("tickChunks", false);
         
-        if (shouldTickChunks | shouldTickBlockEntities) {
-            while (ticksAdded > 0) {
-                if (shouldTickChunks) {
-                    var chunkManager = this.getChunkManager();
-                    chunkManager.tick(shouldKeepTicking, true);
-                }
-                
-                if (shouldTickBlockEntities)
-                    this.tickBlockEntities();
-                
-                --ticksAdded;
-            }
-        }
+        // Simulate world, if desired by user.
+        if (SleepWarp.getConfig().get("tick_block_entities").getAsBoolean())
+            for (int tick = 0; tick < ticksAdded; tick++)
+                this.tickBlockEntities();
+    
+        if (SleepWarp.getConfig().get("tick_chunks").getAsBoolean())
+            for (int tick = 0; tick < ticksAdded; tick++)
+                this.getChunkManager().tick(shouldKeepTicking, true);
         
         // Wake players if not night.
         if (this.worldProperties.getTimeOfDay() % 24000 < 12542) {
-            if (this.getGameRules().getBoolean(GameRules.DO_WEATHER_CYCLE) && this.isRaining()) {
+            if (this.getGameRules().getBoolean(GameRules.DO_WEATHER_CYCLE) && this.isRaining())
                 this.resetWeather();
-            }
             
             this.wakeSleepingPlayers();
         }

@@ -9,27 +9,17 @@
 	"description" : "Speeds up time when sleeping instead of skipping directly to day.",
 	"license": "MPL 2.0",
 
-	"authors": [
-		{
-			"name": "thegiggitybyte",
-			"contact": {
-				"homepage": "https://discord.gg/UPKuVWgU4G",
-				"discord": "https://discord.gg/UPKuVWgU4G"
-			}
-		}
-	],
-
+	"authors": [ "thegiggitybyte" ],
+	"icon":  "assets/sleepwarp/icon.png",
 	"contact": {
-		"homepage": "https://discord.gg/UPKuVWgU4G",
 		"discord": "https://discord.gg/UPKuVWgU4G",
 		"sources": "https://github.com/Giggitybyte/SleepWarp",
 		"issues": "https://github.com/Giggitybyte/SleepWarp/issues"
 	},
 
 	"entrypoints": {
-		"main": [
-			"me.thegiggitybyte.sleepwarp.SleepWarp"
-		]
+		"main": [ "me.thegiggitybyte.sleepwarp.SleepWarp" ],
+		"modmenu": [ "me.thegiggitybyte.sleepwarp.SleepWarp" ]
 	},
 
 	"mixins" : [

@@ -5,7 +5,6 @@
   "package": "me.thegiggitybyte.sleepwarp.mixin",
 
   "mixins": [
-    "ServerWorldAccessor",
     "ServerWorldMixin",
     "SleepManagerAccessor"
   ],
