@@ -6,7 +6,7 @@
 	"environment" : "*",
 
 	"name" : "SleepWarp",
-	"description" : "Speeds up time when sleeping instead of skipping directly to day.",
+	"description" : "Accelerates time when sleeping instead of skipping directly to day.",
 	"license": "MPL 2.0",
 
 	"authors": [ "thegiggitybyte" ],
@@ -18,8 +18,9 @@
 	},
 
 	"entrypoints": {
-		"main": [ "me.thegiggitybyte.sleepwarp.SleepWarp" ],
-		"modmenu": [ "me.thegiggitybyte.sleepwarp.SleepWarp" ]
+		"server": [ "me.thegiggitybyte.sleepwarp.SleepWarp\u0024Server" ],
+		"client": [ "me.thegiggitybyte.sleepwarp.SleepWarp\u0024Client" ],
+		"modmenu": [ "me.thegiggitybyte.sleepwarp.SleepWarp\u0024Client" ]
 	},
 
 	"mixins" : [

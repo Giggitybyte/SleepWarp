@@ -58,8 +58,8 @@ public abstract class ServerWorldMixin extends World {
         if (canWarpTime == false) return;
         
         // Calculate amount of ticks to add to time.
-        var accelerationCurve = Math.max(0.1, Math.min(1.0, SleepWarp.getConfig().get("acceleration_curve").getAsDouble()));
-        var maxTicksAdded = Math.max(1, SleepWarp.getConfig().get("max_ticks_added").getAsInt());
+        var accelerationCurve = Math.max(0.1, Math.min(1.0, SleepWarp.Config.get("acceleration_curve").getAsDouble()));
+        var maxTicksAdded = Math.max(1, SleepWarp.Config.get("max_ticks_added").getAsInt());
         long ticksAdded = 0;
         
         if (sleepTracker.getTotal() - sleepingCount > 0) {
@@ -77,20 +77,20 @@ public abstract class ServerWorldMixin extends World {
         this.getServer().getPlayerManager().sendToDimension(packet, this.getRegistryKey());
         
         // Simulate world, if desired by user.
-        if (SleepWarp.getConfig().get("tick_block_entities").getAsBoolean())
+        if (SleepWarp.Config.get("tick_block_entities").getAsBoolean())
             for (int tick = 0; tick < ticksAdded; tick++)
                 this.tickBlockEntities();
     
-        if (SleepWarp.getConfig().get("tick_chunks").getAsBoolean())
+        if (SleepWarp.Config.get("tick_chunks").getAsBoolean())
             for (int tick = 0; tick < ticksAdded; tick++)
                 this.getChunkManager().tick(shouldKeepTicking, true);
         
         // Wake players if not night.
         if (this.worldProperties.getTimeOfDay() % 24000 < 12542) {
+            this.wakeSleepingPlayers();
+            
             if (this.getGameRules().getBoolean(GameRules.DO_WEATHER_CYCLE) && this.isRaining())
                 this.resetWeather();
-            
-            this.wakeSleepingPlayers();
         }
     }
     
