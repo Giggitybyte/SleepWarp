@@ -24,6 +24,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
@@ -60,13 +61,21 @@ public abstract class ServerWorldMixin extends World {
         // Calculate amount of ticks to add to time.
         var accelerationCurve = Math.max(0.1, Math.min(1.0, SleepWarp.Config.get("acceleration_curve").getAsDouble()));
         var maxTicksAdded = Math.max(1, SleepWarp.Config.get("max_ticks_added").getAsInt());
-        long ticksAdded = 0;
+        long ticksAdded;
         
         if (sleepTracker.getTotal() - sleepingCount > 0) {
             var sleepingRatio = (double) sleepingCount / (double) sleepTracker.getTotal();
             ticksAdded = (long) (maxTicksAdded * (accelerationCurve * sleepingRatio / (2.0 * accelerationCurve * sleepingRatio - accelerationCurve - sleepingRatio + 1.0)));
         } else {
             ticksAdded = maxTicksAdded;
+        }
+    
+        // Remove some ticks if the server is overloaded.
+        var tpsLoss = SleepWarp.TickMonitor.getSkippedTickCount();
+        if (tpsLoss > 0) {
+            var scale = Math.pow(1.17, tpsLoss);
+            var ticksRemoved = ticksAdded / scale;
+            ticksAdded -= ticksRemoved;
         }
         
         // Set time and update clients.
@@ -76,14 +85,14 @@ public abstract class ServerWorldMixin extends World {
         var packet = new WorldTimeUpdateS2CPacket(this.getTime(), this.getTimeOfDay(), doDaylightCycle);
         this.getServer().getPlayerManager().sendToDimension(packet, this.getRegistryKey());
         
-        // Simulate world, if desired by user.
-        if (SleepWarp.Config.get("tick_block_entities").getAsBoolean())
-            for (int tick = 0; tick < ticksAdded; tick++)
-                this.tickBlockEntities();
-    
-        if (SleepWarp.Config.get("tick_chunks").getAsBoolean())
+        // Simulate world if desired by user and the server is not under load.
+        if (SleepWarp.Config.get("tick_chunks").getAsBoolean() && tpsLoss < 3 )
             for (int tick = 0; tick < ticksAdded; tick++)
                 this.getChunkManager().tick(shouldKeepTicking, true);
+        
+        if (SleepWarp.Config.get("tick_block_entities").getAsBoolean() && tpsLoss < 5)
+            for (int tick = 0; tick < ticksAdded; tick++)
+                this.tickBlockEntities();
         
         // Wake players if not night.
         if (this.worldProperties.getTimeOfDay() % 24000 < 12542) {

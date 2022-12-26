@@ -1,5 +1,6 @@
 package me.thegiggitybyte.sleepwarp;
 
+import com.google.common.collect.EvictingQueue;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
@@ -14,14 +15,21 @@ import dev.isxander.yacl.gui.controllers.BooleanController;
 import dev.isxander.yacl.gui.controllers.slider.DoubleSliderController;
 import dev.isxander.yacl.gui.controllers.slider.IntegerSliderController;
 import net.fabricmc.api.*;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.text.Text;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
+import java.util.Queue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class SleepWarp {
     public static class Server implements DedicatedServerModInitializer {
@@ -32,6 +40,8 @@ public class SleepWarp {
     }
     
     public static class Client implements ClientModInitializer, ModMenuApi {
+        // TODO: client-side third person animation.
+        
         @Override
         public void onInitializeClient() {
             Config.initialize();
@@ -169,6 +179,56 @@ public class SleepWarp {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+        }
+    }
+    
+    public static class TickMonitor {
+        private static final BigDecimal TWENTY_BILLION_NANOSECONDS = BigDecimal.valueOf(TimeUnit.SECONDS.toNanos(20));
+        private static final BigDecimal BIG_DECIMAL_TWENTY = BigDecimal.valueOf(20.00);
+        
+        private static long lastMeasurementNanoseconds;
+        private static AtomicInteger currentTick;
+        private static Queue<BigDecimal> recentTps;
+        
+        static {
+            currentTick = new AtomicInteger();
+            recentTps = EvictingQueue.create(10);
+            
+            ServerTickEvents.START_SERVER_TICK.register(server -> {
+                var currentTimeNanoseconds = System.nanoTime();
+                measureTicksPerSecond(currentTimeNanoseconds);
+            });
+        }
+        
+        private static void measureTicksPerSecond(long tickTimeNanoseconds) {
+            if (currentTick.getAndIncrement() % 20 != 0) return;
+            
+            if (lastMeasurementNanoseconds > 0) {
+                var processingTimeNanoseconds = BigDecimal.valueOf(tickTimeNanoseconds - lastMeasurementNanoseconds);
+                var ticksPerSecond = TWENTY_BILLION_NANOSECONDS.divide(processingTimeNanoseconds, 30, RoundingMode.HALF_UP);
+                
+                recentTps.add(ticksPerSecond);
+            }
+            
+            lastMeasurementNanoseconds = tickTimeNanoseconds;
+        }
+        
+        public static BigDecimal getAveragePerSecond() {
+            if (recentTps.isEmpty()) return BIG_DECIMAL_TWENTY;
+            
+            var total = BigDecimal.ZERO;
+            for (var tps : recentTps)
+                total = total.add(tps);
+            
+            var sampleSize = BigDecimal.valueOf(recentTps.size());
+            return total.divide(sampleSize, RoundingMode.HALF_UP);
+        }
+        
+        public static double getSkippedTickCount() {
+            var average = getAveragePerSecond();
+            var skippedTicks = average.remainder(BIG_DECIMAL_TWENTY); // BIG_DECIMAL_TWENTY % average -- FUCK JAVA
+            
+            return skippedTicks.setScale(2, RoundingMode.HALF_UP).doubleValue();
         }
     }
 }
