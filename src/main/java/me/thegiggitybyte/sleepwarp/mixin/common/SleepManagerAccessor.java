@@ -1,4 +1,4 @@
-package me.thegiggitybyte.sleepwarp.mixin;
+package me.thegiggitybyte.sleepwarp.mixin.common;
 
 import net.minecraft.server.world.SleepManager;
 import org.spongepowered.asm.mixin.Mixin;

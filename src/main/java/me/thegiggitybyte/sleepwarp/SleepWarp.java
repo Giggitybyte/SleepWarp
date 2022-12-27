@@ -1,6 +1,7 @@
 package me.thegiggitybyte.sleepwarp;
 
 import com.google.common.collect.EvictingQueue;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
@@ -54,13 +55,13 @@ public class SleepWarp {
                     .save(Config::writePendingChanges)
                     
                     .category(ConfigCategory.createBuilder()
-                            .name(Text.literal("Speed Settings"))
+                            .name(Text.literal("General Settings"))
                             .tooltip(Text.literal("Settings which control how fast time passes"))
                             
                             .option(Option.createBuilder(int.class)
                                     .name(Text.literal("Maximum ticks added"))
                                     .tooltip(Text.literal("Maximum amount of ticks that can be added to the time every server tick. In other words: the max speed of the time warp."))
-                                    .binding(60, Config.get("max_ticks_added")::getAsInt, value -> Config.set("max_ticks_added", value))
+                                    .binding(60, () -> Config.get("max_ticks_added").getAsInt(), value -> Config.set("max_ticks_added", value))
                                     .controller(integerOption -> new IntegerSliderController(integerOption, 1, 100, 1))
                                     .build())
                             
@@ -68,7 +69,7 @@ public class SleepWarp {
                                     .name(Text.literal("Acceleration curve"))
                                     .tooltip(Text.literal("Scales time warp speed in relation to the amount of players sleeping."),
                                             Text.literal("Lower values will require more players to bring the warp up to full speed, and vice versa."))
-                                    .binding(0.2, Config.get("acceleration_curve")::getAsDouble, value -> Config.set("acceleration_curve", value))
+                                    .binding(0.2, () -> Config.get("acceleration_curve").getAsDouble(), value -> Config.set("acceleration_curve", value))
                                     .controller(doubleOption -> new DoubleSliderController(doubleOption, 0.05, 1.0, 0.05))
                                     .build())
                             
@@ -84,7 +85,7 @@ public class SleepWarp {
                                             When true, block entities (e.g. furnaces, spawners, pistons) will be ticked at the same rate as the time warp to simulate the passage of time.
                                             This feature can cause performance issues during the time warp, especially in worlds with high amounts of block entities.
                                             """))
-                                    .binding(false, Config.get("tick_block_entities")::getAsBoolean, value -> Config.set("tick_block_entities", value))
+                                    .binding(false, () -> Config.get("tick_block_entities").getAsBoolean(), value -> Config.set("tick_block_entities", value))
                                     .controller(BooleanController::new)
                                     .build())
                             
@@ -96,9 +97,10 @@ public class SleepWarp {
                                             A chunk tick is responsible for most of the world simulation (e.g. crop growth, fire spread, mob spawns), which can be very demanding.
                                             Servers with high player counts or high chunk view distances should decrease maxTimeAdded and download Lithium (https://modrinth.com/mod/lithium) for the best performance with this feature enabled.
                                             """))
-                                    .binding(false, Config.get("tick_chunks")::getAsBoolean, value -> Config.set("tick_chunks", value))
+                                    .binding(false, () -> Config.get("tick_chunks").getAsBoolean(), value -> Config.set("tick_chunks", value))
                                     .controller(BooleanController::new)
                                     .build())
+                            
                             .build())
                     .build()
                     .generateScreen(parent);
@@ -120,7 +122,12 @@ public class SleepWarp {
         }
         
         public static JsonPrimitive get(String key) {
-            return configJson.get(key).getAsJsonPrimitive();
+            var jsonValue = configJson.get(key);
+            
+            if (jsonValue != null)
+                return jsonValue.getAsJsonPrimitive();
+            else
+                return JsonNull.INSTANCE.getAsJsonPrimitive();
         }
     
         public static void set(String key, Number value) {
