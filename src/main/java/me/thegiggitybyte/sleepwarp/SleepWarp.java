@@ -31,19 +31,22 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class SleepWarp {
-    public static class Server implements DedicatedServerModInitializer {
+    public static class Common implements ModInitializer {
         @Override
-        public void onInitializeServer() {
+        public void onInitialize() {
+            ServerTickEvents.START_SERVER_TICK.register(server -> {
+                var currentTimeNanoseconds = System.nanoTime();
+                TickMonitor.measureTickDuration(currentTimeNanoseconds);
+            });
+    
             Config.initialize();
         }
     }
     
     public static class Client implements ClientModInitializer, ModMenuApi {
-        // TODO: client-side third person animation.
-        
         @Override
         public void onInitializeClient() {
-            Config.initialize();
+            // TODO: client-side third person animation.
         }
         
         @Override
@@ -189,50 +192,44 @@ public class SleepWarp {
     
     public static class TickMonitor {
         private static final BigDecimal TWENTY_BILLION_NANOSECONDS = BigDecimal.valueOf(TimeUnit.SECONDS.toNanos(20));
-        private static final BigDecimal BIG_DECIMAL_TWENTY = BigDecimal.valueOf(20.00);
         
         private static long lastMeasurementNanoseconds;
+        private static BigDecimal averageTicksPerSecond;
         private static AtomicInteger currentTick;
-        private static Queue<BigDecimal> recentTps;
+        private static Queue<BigDecimal> recentMeasurements;
         
-        static {
+        static  {
             currentTick = new AtomicInteger();
-            recentTps = EvictingQueue.create(10);
-            
-            ServerTickEvents.START_SERVER_TICK.register(server -> {
-                var currentTimeNanoseconds = System.nanoTime();
-                measureTicksPerSecond(currentTimeNanoseconds);
-            });
+            recentMeasurements = EvictingQueue.create(10);
+            averageTicksPerSecond =  BigDecimal.valueOf(20.00);
         }
         
-        private static void measureTicksPerSecond(long tickTimeNanoseconds) {
+        private static void measureTickDuration(long tickTimeNanoseconds) {
             if (currentTick.getAndIncrement() % 20 != 0) return;
-            
+    
             if (lastMeasurementNanoseconds > 0) {
                 var processingTimeNanoseconds = BigDecimal.valueOf(tickTimeNanoseconds - lastMeasurementNanoseconds);
                 var ticksPerSecond = TWENTY_BILLION_NANOSECONDS.divide(processingTimeNanoseconds, 30, RoundingMode.HALF_UP);
-                
-                recentTps.add(ticksPerSecond);
+    
+                recentMeasurements.add(ticksPerSecond);
+    
+                var total = BigDecimal.ZERO;
+                for (var measurement : recentMeasurements)
+                    total = total.add(measurement);
+    
+                var sampleSize = BigDecimal.valueOf(recentMeasurements.size());
+                averageTicksPerSecond = total.divide(sampleSize, RoundingMode.HALF_UP);
             }
             
             lastMeasurementNanoseconds = tickTimeNanoseconds;
         }
         
-        public static BigDecimal getAverageTickRate() {
-            if (recentTps.isEmpty()) return BIG_DECIMAL_TWENTY;
-            
-            var total = BigDecimal.ZERO;
-            for (var tps : recentTps)
-                total = total.add(tps);
-            
-            var sampleSize = BigDecimal.valueOf(recentTps.size());
-            return total.divide(sampleSize, RoundingMode.HALF_UP);
+        public static double getAverageTickRate() {
+            return averageTicksPerSecond.setScale(2, RoundingMode.HALF_UP).doubleValue();
         }
         
         public static double getAverageTickLoss() {
-            var average = getAverageTickRate();
-            var skippedTicks = average.remainder(BIG_DECIMAL_TWENTY); // BIG_DECIMAL_TWENTY % average -- FUCK JAVA
-            
+            var skippedTicks = averageTicksPerSecond.remainder(BigDecimal.valueOf(20.00)); // BIG_DECIMAL_TWENTY % lastMeasuredTps -- FUCK JAVA
             return skippedTicks.setScale(2, RoundingMode.HALF_UP).doubleValue();
         }
     }

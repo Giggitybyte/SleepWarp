@@ -9,6 +9,8 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.server.world.SleepManager;
+import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.profiler.Profiler;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.MutableWorldProperties;
@@ -19,17 +21,21 @@ import org.jetbrains.annotations.NotNull;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 @Mixin(ServerWorld.class)
 public abstract class ServerWorldMixin extends World {
+    @Unique private static final long DAY_LENGTH = 24000;
+    
     @Shadow @Final private ServerWorldProperties worldProperties;
     @Shadow @Final List<ServerPlayerEntity> players;
     @Shadow @Final private SleepManager sleepManager;
@@ -93,17 +99,37 @@ public abstract class ServerWorldMixin extends World {
             for (int tick = 0; tick < ticksAdded; tick++)
                 this.tickBlockEntities();
         
-        // Wake players if not night.
-        if (this.worldProperties.getTimeOfDay() % 24000 < 12542) {
+        // Send status message to players based on the time of day.
+        var worldTime = this.worldProperties.getTimeOfDay() % DAY_LENGTH;
+        var actionBarMessage = Text.empty().formatted(Formatting.WHITE);
+        
+        if (worldTime < 12542) { // Wake players if not nighttime.
+            var currentDay = String.valueOf(this.getTime() / DAY_LENGTH);
+            actionBarMessage.append("Day ").append(Text.literal(currentDay).formatted(Formatting.BOLD, Formatting.GOLD));
+            
             this.wakeSleepingPlayers();
             
             if (this.getGameRules().getBoolean(GameRules.DO_WEATHER_CYCLE) && this.isRaining())
                 this.resetWeather();
+
+        } else {
+            var timeRemaining = ((DAY_LENGTH - worldTime) / ticksAdded) / SleepWarp.TickMonitor.getAverageTickRate();
+            
+            actionBarMessage.append(Text.literal(String.valueOf(sleepingCount)).formatted(Formatting.BOLD))
+                    .append(" players sleeping | ")
+                    .append(Text.literal(String.valueOf(timeRemaining)).formatted(Formatting.GOLD))
+                    .append(" seconds until sunrise.");
         }
+        
+        this.players.forEach(player -> player.sendMessage(actionBarMessage, true));
     }
     
     @Redirect(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/world/SleepManager;canSkipNight(I)Z"))
     private boolean suppressVanillaSleep(SleepManager instance, int percentage) {
         return false;
+    }
+    @Redirect(method = "updateSleepingPlayers", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/world/ServerWorld;sendSleepingStatus()V"))
+    private void suppressSleepNotifications(ServerWorld instance) {
+        // ...
     }
 }
