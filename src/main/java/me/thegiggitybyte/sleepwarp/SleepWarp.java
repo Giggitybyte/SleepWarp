@@ -26,11 +26,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 public class SleepWarp {
     public static class Server implements DedicatedServerModInitializer {
@@ -220,7 +218,7 @@ public class SleepWarp {
             lastMeasurementNanoseconds = tickTimeNanoseconds;
         }
         
-        public static BigDecimal getAveragePerSecond() {
+        public static BigDecimal getAverageTickRate() {
             if (recentTps.isEmpty()) return BIG_DECIMAL_TWENTY;
             
             var total = BigDecimal.ZERO;
@@ -231,8 +229,8 @@ public class SleepWarp {
             return total.divide(sampleSize, RoundingMode.HALF_UP);
         }
         
-        public static double getSkippedTickCount() {
-            var average = getAveragePerSecond();
+        public static double getAverageTickLoss() {
+            var average = getAverageTickRate();
             var skippedTicks = average.remainder(BIG_DECIMAL_TWENTY); // BIG_DECIMAL_TWENTY % average -- FUCK JAVA
             
             return skippedTicks.setScale(2, RoundingMode.HALF_UP).doubleValue();

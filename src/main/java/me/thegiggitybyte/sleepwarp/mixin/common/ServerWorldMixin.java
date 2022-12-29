@@ -10,7 +10,6 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.server.world.SleepManager;
 import net.minecraft.util.profiler.Profiler;
-import net.minecraft.village.raid.RaidManager;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.MutableWorldProperties;
 import net.minecraft.world.World;
@@ -43,8 +42,6 @@ public abstract class ServerWorldMixin extends World {
     @Shadow protected abstract void wakeSleepingPlayers();
     @Shadow protected abstract void resetWeather();
     
-    @Shadow public abstract RaidManager getRaidManager();
-    
     @Inject(method = "tick", at = @At(value = "INVOKE_ASSIGN", target = "Lnet/minecraft/world/GameRules;getInt(Lnet/minecraft/world/GameRules$Key;)I"))
     private void trySleepWarp(BooleanSupplier shouldKeepTicking, CallbackInfo ci) {
         // Pre-warp checks.
@@ -73,7 +70,7 @@ public abstract class ServerWorldMixin extends World {
         }
     
         // Remove some ticks if the server is overloaded.
-        var tpsLoss = SleepWarp.TickMonitor.getSkippedTickCount();
+        var tpsLoss = SleepWarp.TickMonitor.getAverageTickLoss();
         if (tpsLoss > 0) {
             var scale = Math.pow(1.17, tpsLoss);
             var ticksRemoved = ticksAdded / scale;
