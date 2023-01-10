@@ -27,6 +27,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
 import java.util.function.BooleanSupplier;
@@ -45,82 +46,105 @@ public abstract class ServerWorldMixin extends World {
     }
     
     @Shadow @NotNull public abstract MinecraftServer getServer();
-    @Shadow protected abstract void wakeSleepingPlayers();
     @Shadow protected abstract void resetWeather();
     
     @Inject(method = "tick", at = @At(value = "INVOKE_ASSIGN", target = "Lnet/minecraft/world/GameRules;getInt(Lnet/minecraft/world/GameRules$Key;)I"))
     private void trySleepWarp(BooleanSupplier shouldKeepTicking, CallbackInfo ci) {
         // Pre-warp checks.
-        var sleepTracker = (SleepManagerAccessor) this.sleepManager;
-        if (sleepTracker.getSleeping() == 0) return;
-        
-        var sleepingCount = this.players.stream()
-                .filter(PlayerEntity::canResetTimeBySleeping)
-                .count();
+        var sleepingCount = this.players.stream().filter(PlayerEntity::canResetTimeBySleeping).count();
         if (sleepingCount == 0) return;
-    
+        
         var percentage = this.getGameRules().getInt(GameRules.PLAYERS_SLEEPING_PERCENTAGE);
         var canWarpTime = sleepingCount >= this.sleepManager.getNightSkippingRequirement(percentage);
         if (canWarpTime == false) return;
         
         // Calculate amount of ticks to add to time.
-        var accelerationCurve = Math.max(0.1, Math.min(1.0, SleepWarp.Config.get("acceleration_curve").getAsDouble()));
-        var maxTicksAdded = Math.max(1, SleepWarp.Config.get("max_ticks_added").getAsInt());
+        var maximumTicks = Math.max(1, SleepWarp.CONFIGURATION.get("max_ticks_added").getAsInt());
+        var worldTime = (this.worldProperties.getTimeOfDay() % DAY_LENGTH);
         long ticksAdded;
-        
-        if (sleepTracker.getTotal() - sleepingCount > 0) {
-            var sleepingRatio = (double) sleepingCount / (double) sleepTracker.getTotal();
-            ticksAdded = (long) (maxTicksAdded * (accelerationCurve * sleepingRatio / (2.0 * accelerationCurve * sleepingRatio - accelerationCurve - sleepingRatio + 1.0)));
+    
+        if (worldTime + maximumTicks < DAY_LENGTH) {
+            var playerScale = BigDecimal.valueOf(Math.max(0.1, Math.min(1.0, SleepWarp.CONFIGURATION.get("player_scale").getAsDouble())));
+            var sleepingRatio = BigDecimal.valueOf(sleepingCount).divide(BigDecimal.valueOf(this.players.size()), 5, RoundingMode.HALF_UP);
+            var scaledRatio = sleepingRatio.multiply(playerScale);
+            var tickScale = scaledRatio.divide(scaledRatio.multiply(BigDecimal.valueOf(2)).subtract(playerScale).subtract(sleepingRatio).add(BigDecimal.ONE), RoundingMode.HALF_UP);
+    
+            ticksAdded = BigDecimal.valueOf(maximumTicks).multiply(tickScale)
+                    .setScale(0, RoundingMode.HALF_UP)
+                    .longValue();
         } else {
-            ticksAdded = maxTicksAdded;
+            ticksAdded = (DAY_LENGTH % (worldTime));
         }
     
         // Remove some ticks if the server is overloaded.
-        var tpsLoss = SleepWarp.TickMonitor.getAverageTickLoss();
-        if (tpsLoss > 0) {
-            var scale = Math.pow(1.17, tpsLoss);
-            var ticksRemoved = ticksAdded / scale;
-            ticksAdded -= ticksRemoved;
+        var tpsLoss = SleepWarp.TICK_MONITOR.getAverageTickLoss();
+        if (tpsLoss >= 1) {
+            var pendingTicks = BigDecimal.valueOf(ticksAdded).setScale(5, RoundingMode.HALF_UP);
+            var tickRate = SleepWarp.TICK_MONITOR.getAverageTickRate();
+            
+            var ticksRemoved = pendingTicks.divide(BigDecimal.valueOf(tpsLoss), RoundingMode.HALF_UP);
+            var secondsRemoved = pendingTicks.divide(tickRate, RoundingMode.HALF_UP);
+        
+            ticksRemoved = (secondsRemoved.compareTo(BigDecimal.ONE) < 0)
+                    ? ticksRemoved.multiply(secondsRemoved).setScale(0, RoundingMode.HALF_UP)
+                    : ticksRemoved.divide(secondsRemoved, 0, RoundingMode.HALF_UP);
+        
+            ticksAdded = pendingTicks.subtract(ticksRemoved).longValue();
         }
+    
+        worldTime += ticksAdded;
         
         // Set time and update clients.
         this.worldProperties.setTimeOfDay(this.worldProperties.getTimeOfDay() + ticksAdded);
+        this.worldProperties.setTime(this.properties.getTime() + ticksAdded);
         
         var doDaylightCycle = this.worldProperties.getGameRules().getBoolean(GameRules.DO_DAYLIGHT_CYCLE);
         var packet = new WorldTimeUpdateS2CPacket(this.getTime(), this.getTimeOfDay(), doDaylightCycle);
         this.getServer().getPlayerManager().sendToDimension(packet, this.getRegistryKey());
+    
+        if (worldTime > 22000 && this.isRaining() && this.getGameRules().getBoolean(GameRules.DO_WEATHER_CYCLE)) {
+            this.resetWeather();
+        }
         
         // Simulate world if desired by user and the server is not under load.
-        if (SleepWarp.Config.get("tick_chunks").getAsBoolean() && tpsLoss < 3 )
+        if (SleepWarp.CONFIGURATION.get("tick_chunks").getAsBoolean() && tpsLoss <= 3)
             for (int tick = 0; tick < ticksAdded; tick++)
                 this.getChunkManager().tick(shouldKeepTicking, true);
         
-        if (SleepWarp.Config.get("tick_block_entities").getAsBoolean() && tpsLoss < 5)
+        if (SleepWarp.CONFIGURATION.get("tick_block_entities").getAsBoolean() && tpsLoss <= 5)
             for (int tick = 0; tick < ticksAdded; tick++)
                 this.tickBlockEntities();
         
-        // Send status message to players based on the time of day.
-        var worldTime = this.worldProperties.getTimeOfDay() % DAY_LENGTH;
+        // Display sleep status message.
         var actionBarMessage = Text.empty().formatted(Formatting.WHITE);
+        var remainingTicks = DAY_LENGTH - worldTime;
         
-        if (worldTime < 12542) { // Wake players if not nighttime.
-            var currentDay = String.valueOf(this.getTime() / DAY_LENGTH);
-            actionBarMessage.append("Day ").append(Text.literal(currentDay).formatted(Formatting.BOLD, Formatting.GOLD));
+        if (remainingTicks > 0) {
+            var remainingSeconds = BigDecimal.valueOf(remainingTicks)
+                    .setScale(1, RoundingMode.HALF_UP)
+                    .divide(BigDecimal.valueOf(ticksAdded), RoundingMode.HALF_UP)
+                    .divide(SleepWarp.TICK_MONITOR.getAverageTickRate(), RoundingMode.HALF_DOWN);
+            Formatting timeColor;
             
-            this.wakeSleepingPlayers();
+            if (sleepingCount > 1) {
+                actionBarMessage.append(Text.literal(String.valueOf(sleepingCount)).formatted(Formatting.BOLD)).append(" players sleeping | ");
+            }
             
-            if (this.getGameRules().getBoolean(GameRules.DO_WEATHER_CYCLE) && this.isRaining())
-                this.resetWeather();
-
+            if (tpsLoss <= 1)
+                timeColor = Formatting.DARK_GREEN;
+            else if (tpsLoss <= 3)
+                timeColor = Formatting.YELLOW;
+            else if (tpsLoss <= 5)
+                timeColor = Formatting.RED;
+            else
+                timeColor = Formatting.DARK_RED;
+            
+            actionBarMessage.append(Text.literal(remainingSeconds.toPlainString()).formatted(timeColor)).append(" seconds until sunrise.");
         } else {
-            var timeRemaining = ((DAY_LENGTH - worldTime) / ticksAdded) / SleepWarp.TickMonitor.getAverageTickRate();
-            
-            actionBarMessage.append(Text.literal(String.valueOf(sleepingCount)).formatted(Formatting.BOLD))
-                    .append(" players sleeping | ")
-                    .append(Text.literal(String.valueOf(timeRemaining)).formatted(Formatting.GOLD))
-                    .append(" seconds until sunrise.");
+            var currentDay = BigDecimal.valueOf(this.getTime()).divide(BigDecimal.valueOf(DAY_LENGTH), RoundingMode.HALF_UP);
+            actionBarMessage.append("Day ").append(Text.literal(currentDay.toPlainString()).formatted(Formatting.GOLD));
         }
-        
+    
         this.players.forEach(player -> player.sendMessage(actionBarMessage, true));
     }
     
@@ -128,6 +152,7 @@ public abstract class ServerWorldMixin extends World {
     private boolean suppressVanillaSleep(SleepManager instance, int percentage) {
         return false;
     }
+    
     @Redirect(method = "updateSleepingPlayers", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/world/ServerWorld;sendSleepingStatus()V"))
     private void suppressSleepNotifications(ServerWorld instance) {
         // ...

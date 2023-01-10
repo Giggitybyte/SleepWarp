@@ -22,6 +22,7 @@ dependencies {
     modImplementation include(fabricApi.module('fabric-screen-api-v1', project.fabric_version))
     modImplementation include(fabricApi.module('fabric-key-binding-api-v1', project.fabric_version))
     modImplementation include(fabricApi.module('fabric-lifecycle-events-v1', project.fabric_version))
+    modImplementation include(fabricApi.module('fabric-entity-events-v1', project.fabric_version))
 
     modImplementation "dev.isxander:yet-another-config-lib:${project.yacl_version}"
     modImplementation("com.terraformersmc:modmenu:${project.mod_menu_version}"){
