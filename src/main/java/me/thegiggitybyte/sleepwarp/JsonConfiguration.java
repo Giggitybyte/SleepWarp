@@ -14,14 +14,15 @@ import java.nio.file.Path;
 
 public class JsonConfiguration {
     private static final JsonObject DEFAULT_CONFIGURATION;
-    private Path filePath;
     private JsonObject userConfiguration;
+    private Path filePath;
     
     static {
         DEFAULT_CONFIGURATION = new JsonObject();
         
         DEFAULT_CONFIGURATION.addProperty("max_ticks_added", 60);
         DEFAULT_CONFIGURATION.addProperty("player_scale", 0.2);
+        DEFAULT_CONFIGURATION.addProperty("performance_mode", false);
         DEFAULT_CONFIGURATION.addProperty("tick_block_entities", false);
         DEFAULT_CONFIGURATION.addProperty("tick_chunks", false);
     }
@@ -48,6 +49,7 @@ public class JsonConfiguration {
             }
             
             validateJsonStructure();
+            writePendingChanges();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

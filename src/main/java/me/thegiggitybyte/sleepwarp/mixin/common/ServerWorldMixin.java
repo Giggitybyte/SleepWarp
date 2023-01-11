@@ -64,7 +64,7 @@ public abstract class ServerWorldMixin extends World {
         long ticksAdded;
     
         if (worldTime + maximumTicks < DAY_LENGTH) {
-            var playerScale = BigDecimal.valueOf(Math.max(0.1, Math.min(1.0, SleepWarp.CONFIGURATION.get("player_scale").getAsDouble())));
+            var playerScale = BigDecimal.valueOf(Math.max(0.05, Math.min(1.0, SleepWarp.CONFIGURATION.get("player_scale").getAsDouble())));
             var sleepingRatio = BigDecimal.valueOf(sleepingCount).divide(BigDecimal.valueOf(this.players.size()), 5, RoundingMode.HALF_UP);
             var scaledRatio = sleepingRatio.multiply(playerScale);
             var tickScale = scaledRatio.divide(scaledRatio.multiply(BigDecimal.valueOf(2)).subtract(playerScale).subtract(sleepingRatio).add(BigDecimal.ONE), RoundingMode.HALF_UP);
@@ -77,26 +77,28 @@ public abstract class ServerWorldMixin extends World {
         }
     
         // Remove some ticks if the server is overloaded.
+        var performanceMode = SleepWarp.CONFIGURATION.get("performance_mode").getAsBoolean();
         var tpsLoss = SleepWarp.TICK_MONITOR.getAverageTickLoss();
-        if (tpsLoss >= 1) {
+        
+        if (tpsLoss >= 1 && performanceMode) {
             var pendingTicks = BigDecimal.valueOf(ticksAdded).setScale(5, RoundingMode.HALF_UP);
             var tickRate = SleepWarp.TICK_MONITOR.getAverageTickRate();
-            
+    
             var ticksRemoved = pendingTicks.divide(BigDecimal.valueOf(tpsLoss), RoundingMode.HALF_UP);
-            var secondsRemoved = pendingTicks.divide(tickRate, RoundingMode.HALF_UP);
-        
-            ticksRemoved = (secondsRemoved.compareTo(BigDecimal.ONE) < 0)
-                    ? ticksRemoved.multiply(secondsRemoved).setScale(0, RoundingMode.HALF_UP)
-                    : ticksRemoved.divide(secondsRemoved, 0, RoundingMode.HALF_UP);
-        
+            var pendingSeconds = pendingTicks.divide(tickRate, RoundingMode.HALF_UP);
+    
+            ticksRemoved = (pendingSeconds.compareTo(BigDecimal.ONE) < 0)
+                    ? ticksRemoved.multiply(pendingSeconds).setScale(0, RoundingMode.HALF_UP)
+                    : ticksRemoved.divide(pendingSeconds, 0, RoundingMode.HALF_UP);
+    
             ticksAdded = pendingTicks.subtract(ticksRemoved).longValue();
         }
-    
-        worldTime += ticksAdded;
         
         // Set time and update clients.
         this.worldProperties.setTimeOfDay(this.worldProperties.getTimeOfDay() + ticksAdded);
         this.worldProperties.setTime(this.properties.getTime() + ticksAdded);
+    
+        worldTime += ticksAdded;
         
         var doDaylightCycle = this.worldProperties.getGameRules().getBoolean(GameRules.DO_DAYLIGHT_CYCLE);
         var packet = new WorldTimeUpdateS2CPacket(this.getTime(), this.getTimeOfDay(), doDaylightCycle);
@@ -107,11 +109,11 @@ public abstract class ServerWorldMixin extends World {
         }
         
         // Simulate world if desired by user and the server is not under load.
-        if (SleepWarp.CONFIGURATION.get("tick_chunks").getAsBoolean() && tpsLoss <= 3)
+        if (SleepWarp.CONFIGURATION.get("tick_chunks").getAsBoolean() && (!performanceMode || tpsLoss <= 3))
             for (int tick = 0; tick < ticksAdded; tick++)
                 this.getChunkManager().tick(shouldKeepTicking, true);
         
-        if (SleepWarp.CONFIGURATION.get("tick_block_entities").getAsBoolean() && tpsLoss <= 5)
+        if (SleepWarp.CONFIGURATION.get("tick_block_entities").getAsBoolean() && (!performanceMode || tpsLoss <= 5))
             for (int tick = 0; tick < ticksAdded; tick++)
                 this.tickBlockEntities();
         
@@ -130,14 +132,18 @@ public abstract class ServerWorldMixin extends World {
                 actionBarMessage.append(Text.literal(String.valueOf(sleepingCount)).formatted(Formatting.BOLD)).append(" players sleeping | ");
             }
             
-            if (tpsLoss <= 1)
-                timeColor = Formatting.DARK_GREEN;
-            else if (tpsLoss <= 3)
-                timeColor = Formatting.YELLOW;
-            else if (tpsLoss <= 5)
-                timeColor = Formatting.RED;
-            else
-                timeColor = Formatting.DARK_RED;
+            if (performanceMode) {
+                if (tpsLoss <= 1)
+                    timeColor = Formatting.DARK_GREEN;
+                else if (tpsLoss <= 3)
+                    timeColor = Formatting.YELLOW;
+                else if (tpsLoss <= 5)
+                    timeColor = Formatting.RED;
+                else
+                    timeColor = Formatting.DARK_RED;
+            } else {
+                timeColor = Formatting.GOLD;
+            }
             
             actionBarMessage.append(Text.literal(remainingSeconds.toPlainString()).formatted(timeColor)).append(" seconds until sunrise.");
         } else {
