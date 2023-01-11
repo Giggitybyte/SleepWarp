@@ -25,10 +25,7 @@ public class SleepWarp {
         @Override
         public void onInitialize() {
             EntitySleepEvents.ALLOW_SLEEP_TIME.register((player, sleepingPos, vanillaResult) -> {
-                var world = player.getWorld();
-                var worldTime = world.getTimeOfDay() % 24000;
-                
-                if (vanillaResult == false && worldTime > 23000)
+                if (vanillaResult == false && (player.getWorld().getTimeOfDay() % 24000 > 12542))
                     return ActionResult.SUCCESS;
                 else
                     return ActionResult.PASS;

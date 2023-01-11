@@ -47,6 +47,7 @@ public abstract class ServerWorldMixin extends World {
     
     @Shadow @NotNull public abstract MinecraftServer getServer();
     @Shadow protected abstract void resetWeather();
+    @Shadow protected abstract void wakeSleepingPlayers();
     
     @Inject(method = "tick", at = @At(value = "INVOKE_ASSIGN", target = "Lnet/minecraft/world/GameRules;getInt(Lnet/minecraft/world/GameRules$Key;)I"))
     private void trySleepWarp(BooleanSupplier shouldKeepTicking, CallbackInfo ci) {
@@ -73,7 +74,7 @@ public abstract class ServerWorldMixin extends World {
                     .setScale(0, RoundingMode.HALF_UP)
                     .longValue();
         } else {
-            ticksAdded = (DAY_LENGTH % (worldTime));
+            ticksAdded = (DAY_LENGTH % worldTime);
         }
     
         // Remove some ticks if the server is overloaded.
@@ -103,10 +104,6 @@ public abstract class ServerWorldMixin extends World {
         var doDaylightCycle = this.worldProperties.getGameRules().getBoolean(GameRules.DO_DAYLIGHT_CYCLE);
         var packet = new WorldTimeUpdateS2CPacket(this.getTime(), this.getTimeOfDay(), doDaylightCycle);
         this.getServer().getPlayerManager().sendToDimension(packet, this.getRegistryKey());
-    
-        if (worldTime > 22000 && this.isRaining() && this.getGameRules().getBoolean(GameRules.DO_WEATHER_CYCLE)) {
-            this.resetWeather();
-        }
         
         // Simulate world if desired by user and the server is not under load.
         if (SleepWarp.CONFIGURATION.get("tick_chunks").getAsBoolean() && (!performanceMode || tpsLoss <= 3))
@@ -149,6 +146,12 @@ public abstract class ServerWorldMixin extends World {
         } else {
             var currentDay = BigDecimal.valueOf(this.getTime()).divide(BigDecimal.valueOf(DAY_LENGTH), RoundingMode.HALF_UP);
             actionBarMessage.append("Day ").append(Text.literal(currentDay.toPlainString()).formatted(Formatting.GOLD));
+    
+            if (this.isRaining() && this.getGameRules().getBoolean(GameRules.DO_WEATHER_CYCLE)) {
+                this.resetWeather();
+            }
+            
+            this.wakeSleepingPlayers();
         }
     
         this.players.forEach(player -> player.sendMessage(actionBarMessage, true));
