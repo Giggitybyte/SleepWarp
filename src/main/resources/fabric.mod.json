@@ -12,9 +12,19 @@
 	"authors": [ "thegiggitybyte" ],
 	"icon":  "assets/sleepwarp/icon.png",
 	"contact": {
-		"discord": "https://discord.gg/UPKuVWgU4G",
+		"homepage": "https://modrinth.com/mod/sleep-warp",
 		"sources": "https://github.com/Giggitybyte/SleepWarp",
 		"issues": "https://github.com/Giggitybyte/SleepWarp/issues"
+	},
+
+	"custom": {
+		"modmenu": {
+			"links": {
+				"Modrinth": "https://modrinth.com/mod/sleep-warp",
+				"CurseForge": "https://www.curseforge.com/minecraft/mc-mods/sleep-warp",
+				"modmenu.discord": "https://discord.gg/UPKuVWgU4G"
+			}
+		}
 	},
 
 	"entrypoints": {
@@ -29,6 +39,6 @@
 
 	"depends" : {
 		"fabricloader" : ">=0.13.0",
-		"minecraft" : ">=1.19"
+		"minecraft" : ">=1.19.3"
 	}
 }

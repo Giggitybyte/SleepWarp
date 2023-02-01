@@ -22,9 +22,11 @@ public class JsonConfiguration {
         
         DEFAULT_CONFIGURATION.addProperty("max_ticks_added", 60);
         DEFAULT_CONFIGURATION.addProperty("player_scale", 0.2);
-        DEFAULT_CONFIGURATION.addProperty("performance_mode", false);
+        DEFAULT_CONFIGURATION.addProperty("action_bar_message", true);
+        DEFAULT_CONFIGURATION.addProperty("use_sleep_percentage", false);
         DEFAULT_CONFIGURATION.addProperty("tick_block_entities", false);
         DEFAULT_CONFIGURATION.addProperty("tick_chunks", false);
+        DEFAULT_CONFIGURATION.addProperty("performance_mode", false);
     }
     
     public JsonConfiguration() {
