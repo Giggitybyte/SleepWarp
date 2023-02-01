@@ -28,7 +28,6 @@
 	},
 
 	"entrypoints": {
-		"server": [ "me.thegiggitybyte.sleepwarp.SleepWarp\u0024Server" ],
 		"main": [ "me.thegiggitybyte.sleepwarp.SleepWarp\u0024Common" ],
 		"modmenu": [ "me.thegiggitybyte.sleepwarp.SleepWarp\u0024Client" ]
 	},
