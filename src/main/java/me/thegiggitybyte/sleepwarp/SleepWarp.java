@@ -59,8 +59,7 @@ public class SleepWarp {
                                     .append(" players sleeping: ")
                                     .append(playerText);
     
-                            players.forEach(player -> player.sendMessage(messageText));
-    
+                            ctx.getSource().sendFeedback(messageText, false);
                             return 0;
                         }));
                 
