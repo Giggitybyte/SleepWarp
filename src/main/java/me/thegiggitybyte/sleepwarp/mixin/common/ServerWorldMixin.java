@@ -103,11 +103,11 @@ public abstract class ServerWorldMixin extends World {
         this.getServer().getPlayerManager().sendToDimension(packet, this.getRegistryKey());
         
         // Simulate world if desired by user and the server is not under load.
-        if (SleepWarp.CONFIGURATION.get("tick_chunks").getAsBoolean() && (!performanceMode || tpsLoss <= 3))
+        if (SleepWarp.CONFIGURATION.get("tick_chunks").getAsBoolean() && (!performanceMode || tpsLoss < 5))
             for (int tick = 0; tick < ticksAdded; tick++)
                 this.getChunkManager().tick(() -> true, true);
         
-        if (SleepWarp.CONFIGURATION.get("tick_block_entities").getAsBoolean() && (!performanceMode || tpsLoss <= 5))
+        if (SleepWarp.CONFIGURATION.get("tick_block_entities").getAsBoolean() && (!performanceMode || tpsLoss < 8))
             for (int tick = 0; tick < ticksAdded; tick++)
                 this.tickBlockEntities();
         
