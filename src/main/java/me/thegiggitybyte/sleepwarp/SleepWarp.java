@@ -65,7 +65,7 @@ public class SleepWarp {
                             .option(Option.createBuilder(boolean.class)
                                     .name(Text.literal("Action Bar Message"))
                                     .tooltip(Text.literal("Display the time remaining in the action bar."))
-                                    .binding(true, () -> USER_CONFIGURATION.get("action_bar_message").getAsBoolean(), value -> USER_CONFIGURATION.set("action_bar_message", value))
+                                    .binding(true, () -> USER_CONFIGURATION.get("action_bar_messages").getAsBoolean(), value -> USER_CONFIGURATION.set("action_bar_message", value))
                                     .controller(booleanOption -> new BooleanController(booleanOption, value -> Text.literal(value ? "Enabled" : "Disabled"), false))
                                     .build())
                             
