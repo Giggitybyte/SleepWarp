@@ -13,20 +13,20 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class JsonConfiguration {
-    private static final JsonObject DEFAULT_CONFIGURATION;
-    private JsonObject userConfiguration;
+    private static final JsonObject DEFAULT_JSON;
+    private JsonObject userJson;
     private Path filePath;
     
     static {
-        DEFAULT_CONFIGURATION = new JsonObject();
+        DEFAULT_JSON = new JsonObject();
         
-        DEFAULT_CONFIGURATION.addProperty("max_ticks_added", 60);
-        DEFAULT_CONFIGURATION.addProperty("player_scale", 0.2);
-        DEFAULT_CONFIGURATION.addProperty("action_bar_message", true);
-        DEFAULT_CONFIGURATION.addProperty("use_sleep_percentage", false);
-        DEFAULT_CONFIGURATION.addProperty("tick_block_entities", false);
-        DEFAULT_CONFIGURATION.addProperty("tick_chunks", false);
-        DEFAULT_CONFIGURATION.addProperty("performance_mode", false);
+        DEFAULT_JSON.addProperty("max_ticks_added", 60);
+        DEFAULT_JSON.addProperty("player_scale", 0.6);
+        DEFAULT_JSON.addProperty("action_bar_messages", true);
+        DEFAULT_JSON.addProperty("use_sleep_percentage", false);
+        DEFAULT_JSON.addProperty("tick_block_entities", false);
+        DEFAULT_JSON.addProperty("tick_chunks", false);
+        DEFAULT_JSON.addProperty("performance_mode", false);
     }
     
     public JsonConfiguration() {
@@ -44,10 +44,10 @@ public class JsonConfiguration {
             if (Files.exists(filePath)) {
                 var jsonString = Files.readString(filePath);
                 if (!jsonString.isEmpty())
-                    userConfiguration = JsonParser.parseString(jsonString).getAsJsonObject();
+                    userJson = JsonParser.parseString(jsonString).getAsJsonObject();
                 
             } else {
-                userConfiguration = new JsonObject();
+                userJson = new JsonObject();
             }
             
             validateJsonStructure();
@@ -57,8 +57,20 @@ public class JsonConfiguration {
         }
     }
     
+    static JsonObject getDefaultJson() {
+        return DEFAULT_JSON;
+    }
+    
+    JsonObject getInstance() {
+        return userJson;
+    }
+    
+    public boolean has(String key) {
+        return userJson.has(key);
+    }
+    
     public JsonPrimitive get(String key) {
-        var jsonValue = userConfiguration.get(key);
+        var jsonValue = userJson.get(key);
         
         if (jsonValue != null)
             return jsonValue.getAsJsonPrimitive();
@@ -79,12 +91,11 @@ public class JsonConfiguration {
     }
     
     private void set(String key, JsonPrimitive value) {
-        userConfiguration.add(key, value);
+        userJson.add(key, value);
     }
     
     public void writePendingChanges() {
-        try {
-            var fileStream = Files.newOutputStream(filePath);
+        try (var fileStream = Files.newOutputStream(filePath)) {
             var stringWriter = new StringWriter();
             var jsonWriter = new JsonWriter(stringWriter);
             
@@ -93,7 +104,7 @@ public class JsonConfiguration {
             
             validateJsonStructure();
             
-            Streams.write(userConfiguration, jsonWriter);
+            Streams.write(userJson, jsonWriter);
             fileStream.write(stringWriter.toString().getBytes());
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -101,12 +112,12 @@ public class JsonConfiguration {
     }
     
     private void validateJsonStructure() {
-        for (var entry : DEFAULT_CONFIGURATION.entrySet()) {
+        for (var entry : DEFAULT_JSON.entrySet()) {
             var key = entry.getKey();
             var value = entry.getValue();
             
-            if (!userConfiguration.has(key) || !userConfiguration.get(key).isJsonPrimitive()) {
-                userConfiguration.add(key, value);
+            if (!userJson.has(key) || !userJson.get(key).isJsonPrimitive()) {
+                userJson.add(key, value);
             }
         }
     }
