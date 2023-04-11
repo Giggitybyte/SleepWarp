@@ -7,6 +7,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import me.thegiggitybyte.sleepwarp.config.JsonConfiguration;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.MutableText;
@@ -18,19 +19,18 @@ import java.util.concurrent.CompletableFuture;
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
 
-public class MinecraftCommands {
+public class Commands {
     static void register() {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
             var sleepWarpCommand = dispatcher.register(literal("sleepwarp"));
             dispatcher.register(literal("sleep").redirect(sleepWarpCommand));
             
-            var statusCommand = dispatcher.register(literal("status").executes(MinecraftCommands::executeStatusCommand));
+            var statusCommand = literal("status").executes(Commands::executeStatusCommand).build();
             sleepWarpCommand.addChild(statusCommand);
             
-            var configKeyArg = argument("key", StringArgumentType.word()).suggests(MinecraftCommands::getConfigKeySuggestions).executes(MinecraftCommands::executeConfigCommand);
-            var configValueArg = argument("value", StringArgumentType.greedyString()).suggests(MinecraftCommands::getConfigValueSuggestions).executes(MinecraftCommands::executeConfigCommand);
-            var configCommand = dispatcher.register(literal("config").requires(source -> source.hasPermissionLevel(2)).then(configKeyArg.then(configValueArg)));
-            
+            var configKeyArg = argument("key", StringArgumentType.word()).suggests(Commands::getConfigKeySuggestions);
+            var configValueArg = argument("value", StringArgumentType.greedyString()).suggests(Commands::getConfigValueSuggestions).executes(Commands::executeConfigCommand);
+            var configCommand = literal("config").requires(source -> source.hasPermissionLevel(2)).then(configKeyArg.then(configValueArg)).build();
             sleepWarpCommand.addChild(configCommand);
         });
     }
@@ -61,23 +61,24 @@ public class MinecraftCommands {
         return Command.SINGLE_SUCCESS;
     }
     
+    // TODO: BETTER INPUT VALIDATION
     private static int executeConfigCommand(CommandContext<ServerCommandSource> ctx) throws CommandSyntaxException {
         var keyString = StringArgumentType.getString(ctx, "key");
         var valueString = StringArgumentType.getString(ctx, "value");
         MutableText messageText = null;
         String setValueString = "";
         
-        if (JsonConfiguration.getDefaultJson().keySet().contains(keyString)) {
-            var valuePrimitive = JsonConfiguration.getDefaultJson().get(keyString).getAsJsonPrimitive();
+        if (JsonConfiguration.getDefaultInstance().hasKey(keyString)) {
+            var valuePrimitive = JsonConfiguration.getDefaultInstance().getValue(keyString);
             
             if (valuePrimitive.isString()) {
-                SleepWarp.USER_CONFIGURATION.set(keyString, valueString);
+                JsonConfiguration.getUserInstance().setValue(keyString, valueString);
                 setValueString = valueString;
                 
             } else if (valuePrimitive.isBoolean()) {
                 if (valueString.equals("true") | valueString.equals("false")) {
                     var valueBoolean = Boolean.parseBoolean(valueString);
-                    SleepWarp.USER_CONFIGURATION.set(keyString, valueBoolean);
+                    JsonConfiguration.getUserInstance().setValue(keyString, valueBoolean);
                     setValueString = String.valueOf(valueBoolean);
                 } else {
                     messageText = Text.literal("Configuration key '").append(keyString).append("' expects a boolean (true or false)");
@@ -86,12 +87,12 @@ public class MinecraftCommands {
             } else if (valuePrimitive.isNumber()) {
                 try {
                     var valueInt = Integer.parseInt(valueString);
-                    SleepWarp.USER_CONFIGURATION.set(keyString, valueInt);
+                    JsonConfiguration.getUserInstance().setValue(keyString, valueInt);
                     setValueString = String.valueOf(valueInt);
                 } catch (NumberFormatException intException) {
                     try {
                         var valueDouble = Double.parseDouble(valueString);
-                        SleepWarp.USER_CONFIGURATION.set(keyString, valueDouble);
+                        JsonConfiguration.getUserInstance().setValue(keyString, valueDouble);
                         setValueString = String.valueOf(valueDouble);
                     } catch (NumberFormatException doubleException) {
                         messageText = Text.literal("Configuration key '").append(keyString).append("' expects an integer or float number");
@@ -108,7 +109,7 @@ public class MinecraftCommands {
         }
         
         if (messageText == null) {
-            SleepWarp.USER_CONFIGURATION.writePendingChanges();
+            JsonConfiguration.getUserInstance().writePendingChanges();
             
             messageText = Text.empty()
                     .append(Text.literal("✔ ").formatted(Formatting.GREEN))
@@ -121,7 +122,7 @@ public class MinecraftCommands {
     }
     
     private static CompletableFuture<Suggestions> getConfigKeySuggestions(CommandContext<ServerCommandSource> ctx, SuggestionsBuilder builder) {
-        for (var key : JsonConfiguration.getDefaultJson().keySet())
+        for (var key : JsonConfiguration.getDefaultInstance().getKeys())
             builder.suggest(key, Text.literal("key"));
         
         return builder.buildFuture();
@@ -130,13 +131,13 @@ public class MinecraftCommands {
     private static CompletableFuture<Suggestions> getConfigValueSuggestions(CommandContext<ServerCommandSource> ctx, SuggestionsBuilder builder) {
         var keyString = ctx.getLastChild().getArgument("key", String.class);
         
-        if (JsonConfiguration.getDefaultJson().has(keyString)) {
+        if (JsonConfiguration.getDefaultInstance().hasKey(keyString)) {
             String suggestion;
             
-            if (SleepWarp.USER_CONFIGURATION.has(keyString))
-                suggestion = SleepWarp.USER_CONFIGURATION.get(keyString).getAsString();
+            if (JsonConfiguration.getUserInstance().hasKey(keyString))
+                suggestion = JsonConfiguration.getUserInstance().getValue(keyString).getAsString();
             else
-                suggestion = JsonConfiguration.getDefaultJson().get(keyString).getAsJsonPrimitive().getAsString();
+                suggestion = JsonConfiguration.getUserInstance().getValue(keyString).getAsString();
             
             var pendingValue = builder.getRemaining();
             if (pendingValue.length() == 0 || pendingValue.equals(suggestion))

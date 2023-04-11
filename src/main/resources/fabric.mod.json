@@ -28,13 +28,19 @@
 	},
 
 	"entrypoints": {
-		"main": [ "me.thegiggitybyte.sleepwarp.SleepWarp\u0024Common" ],
-		"modmenu": [ "me.thegiggitybyte.sleepwarp.SleepWarp\u0024Client" ]
+		"main": [
+          "me.thegiggitybyte.sleepwarp.SleepWarp\u0024Common"
+        ],
+		"modmenu": [
+          "me.thegiggitybyte.sleepwarp.config.ClientConfiguration"
+        ]
 	},
 
 	"mixins" : [
       "sleepwarp.mixins.json"
 	],
+
+	"accessWidener": "sleepwarp.accesswidener",
 
 	"depends" : {
 		"fabricloader" : ">=0.13.0",
