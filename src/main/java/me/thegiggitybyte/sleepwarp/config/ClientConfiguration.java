@@ -4,18 +4,15 @@ import com.terraformersmc.modmenu.api.ConfigScreenFactory;
 import com.terraformersmc.modmenu.api.ModMenuApi;
 import dev.isxander.yacl.api.ConfigCategory;
 import dev.isxander.yacl.api.Option;
+import dev.isxander.yacl.api.OptionGroup;
 import dev.isxander.yacl.api.YetAnotherConfigLib;
-import dev.isxander.yacl.gui.controllers.BooleanController;
+import dev.isxander.yacl.gui.controllers.TickBoxController;
 import dev.isxander.yacl.gui.controllers.slider.DoubleSliderController;
 import dev.isxander.yacl.gui.controllers.slider.IntegerSliderController;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
-import java.util.function.Function;
-
 public class ClientConfiguration implements ModMenuApi {
-    private static final Function<Boolean, Text> ENABLED_DISABLED = (value) -> value ? Text.literal("Enabled").formatted(Formatting.UNDERLINE) : Text.literal("Disabled").formatted(Formatting.GRAY);
-    
     @Override
     public ConfigScreenFactory<?> getModConfigScreenFactory() {
         return (parentScreen) -> YetAnotherConfigLib.createBuilder()
@@ -23,31 +20,46 @@ public class ClientConfiguration implements ModMenuApi {
                 .save(() -> JsonConfiguration.getUserInstance().writePendingChanges())
                 
                 .category(ConfigCategory.createBuilder()
-                        .name(Text.literal("General Settings"))
-                        
-                        .option(warpSpeed())
-                        .option(actionBarMessages())
-                        .option(playerMultiplier())
-                        .option(useSleepingPercentage())
-                        .option(performanceMode())
-                        
+                        .name(Text.literal("Settings"))
+                        .group(OptionGroup.createBuilder()
+                                .name(Text.literal("General"))
+                                .option(warpSpeed())
+                                .option(actionBarMessages())
+                                .build())
+                        .group(OptionGroup.createBuilder()
+                                .name(Text.literal("LAN Multiplayer"))
+                                .tooltip(Text.literal("Options which are only effective in multiplayer LAN worlds."))
+                                .option(playerMultiplier())
+                                .option(useSleepingPercentage())
+                                .build()
+                        )
                         .build()
                 )
                 
                 .category(ConfigCategory.createBuilder()
-                        .name(Text.literal("Simulation Settings"))
-                        
-                        .option(tickRandomBlock())
-                        .option(tickBlockEntities())
-                        .option(tickSnowAccumulation())
-                        .option(tickIceFreezing())
-                        .option(tickLightning())
-                        .option(tickEntities())
-                        .option(tickSpawners())
-                        .option(tickMobSpawn())
-                        
+                        .name(Text.literal("World Simulation"))
+                        .tooltip(Text.literal("Options which speed up parts of the world to simulate the passage of time."))
+                        .group(OptionGroup.createBuilder()
+                                .name(Text.literal("Blocks"))
+                                .option(tickRandomBlock())
+                                .option(tickBlockEntities())
+                                .option(tickSnowAccumulation())
+                                .option(tickIceFreezing())
+                                .build())
+                        .group(OptionGroup.createBuilder()
+                                .name(Text.literal("Mobs"))
+                                .option(tickAnimals())
+                                // .option(animalTickMultiplier())
+                                .option(tickMonsters())
+                                // .option(monsterTickMultiplier())
+                                .build())
+                        .group(OptionGroup.createBuilder()
+                                .name(Text.literal("Weather"))
+                                .option(tickLightning())
+                                .build())
                         .build()
                 )
+                
                 .build()
                 .generateScreen(parentScreen);
     }
@@ -68,32 +80,26 @@ public class ClientConfiguration implements ModMenuApi {
     private static Option<Boolean> actionBarMessages() {
         return Option.createBuilder(boolean.class)
                 .name(Text.literal("Action Bar Messages"))
-                .tooltip(Text.literal("Display sleep information in the action bar."))
+                .tooltip(Text.literal("Display notifications and sleep status in the action bar."))
                 .binding(
                         JsonConfiguration.getDefaultInstance().getValue("action_bar_messages").getAsBoolean(),
                         () -> JsonConfiguration.getUserInstance().getValue("action_bar_messages").getAsBoolean(),
                         value -> JsonConfiguration.getUserInstance().setValue("action_bar_message", value)
                 )
-                .controller(booleanOption -> new BooleanController(booleanOption, ENABLED_DISABLED, false))
+                .controller(booleanOption -> new TickBoxController(booleanOption))
                 .build();
     }
     
     private static Option<Double> playerMultiplier() {
         return Option.createBuilder(double.class)
                 .name(Text.literal("Player Multiplier"))
-                .tooltip(
-                        Text.literal("Scales time warp speed based off of the percentage of players sleeping."),
-                        Text.empty(),
-                        Text.literal("This setting is only effective on LAN worlds.")
-                )
+                .tooltip(Text.literal("Scales time warp speed based off of the percentage of players sleeping."))
                 .binding(
                         JsonConfiguration.getDefaultInstance().getValue("player_multiplier").getAsDouble(),
                         () -> JsonConfiguration.getUserInstance().getValue("player_multiplier").getAsDouble(),
                         value -> JsonConfiguration.getUserInstance().setValue("player_multiplier", value)
                 )
-                .controller(doubleOption -> {
-                    return new DoubleSliderController(doubleOption, 0.1, 1.0, 0.05);
-                })
+                .controller(doubleOption -> new DoubleSliderController(doubleOption, 0.1, 1.0, 0.05))
                 .build();
     }
     
@@ -104,46 +110,27 @@ public class ClientConfiguration implements ModMenuApi {
                         Text.literal("Whether or not to respect the ").append(Text.literal("playersSleepingPercentage").formatted(Formatting.ITALIC)).append(Text.literal(" gamerule.")),
                         Text.empty(),
                         Text.literal("If enabled a percentage of players would need to be asleep before the time warp can begin."),
-                        Text.literal("Otherwise, only one player would be required to begin accelerating time."),
-                        Text.empty(),
-                        Text.literal("This setting is only effective on LAN worlds.")
+                        Text.literal("Otherwise, only one player would be required to begin accelerating time.")
                 )
                 .binding(
                         JsonConfiguration.getDefaultInstance().getValue("use_sleep_percentage").getAsBoolean(),
                         () -> JsonConfiguration.getUserInstance().getValue("use_sleep_percentage").getAsBoolean(),
                         value -> JsonConfiguration.getUserInstance().setValue("use_sleep_percentage", value)
                 )
-                .controller(booleanOption -> new BooleanController(booleanOption, ENABLED_DISABLED, false))
-                .build();
-    }
-    
-    private static Option<Boolean> performanceMode() {
-        return Option.createBuilder(boolean.class)
-                .name(Text.literal("Performance Mode"))
-                .tooltip(Text.literal("Scales maximum warp speed based on the average TPS during the time warp. "),
-                        Text.literal("World simulation features above will be disabled dynamically during each tick when the average begins to drop, and enabled when the average returns to normal."))
-                .binding(
-                        JsonConfiguration.getDefaultInstance().getValue("performance_mode").getAsBoolean(),
-                        () -> JsonConfiguration.getUserInstance().getValue("performance_mode").getAsBoolean(),
-                        value -> JsonConfiguration.getUserInstance().setValue("performance_mode", value)
-                )
-                .controller(booleanOption -> new BooleanController(booleanOption, ENABLED_DISABLED, false))
+                .controller(booleanOption -> new TickBoxController(booleanOption))
                 .build();
     }
     
     private static Option<Boolean> tickBlockEntities() {
         return Option.createBuilder(boolean.class)
                 .name(Text.literal("Tick Block Entities"))
-                .tooltip(
-                        Text.literal("Block entities (e.g. furnaces, pistons, hoppers) will be tick at increased rate through the night."),
-                        Text.literal("This feature can cause performance issues during the time warp, especially in worlds with high amounts of block entities.")
-                )
+                .tooltip(Text.literal("Block entities (e.g. furnaces, pistons, hoppers) will be ticked at the same rate as time."))
                 .binding(
                         JsonConfiguration.getDefaultInstance().getValue("tick_block_entities").getAsBoolean(),
                         () -> JsonConfiguration.getUserInstance().getValue("tick_block_entities").getAsBoolean(),
                         value -> JsonConfiguration.getUserInstance().setValue("tick_block_entities", value)
                 )
-                .controller(booleanOption -> new BooleanController(booleanOption, ENABLED_DISABLED, false))
+                .controller(booleanOption -> new TickBoxController(booleanOption))
                 .build();
     }
     
@@ -151,15 +138,15 @@ public class ClientConfiguration implements ModMenuApi {
         return Option.createBuilder(boolean.class)
                 .name(Text.literal("Tick Random Block"))
                 .tooltip(
-                        Text.literal("Random ticks will occur at an increased rate through the night."),
-                        Text.literal("Among other things this will cause crops, sugar cane and saplings to grow faster.")
+                        Text.literal("Random block ticks will occur more often while sleeping."),
+                        Text.literal("Among other things this will cause crops, sugar cane, and saplings to grow.")
                 )
                 .binding(
                         JsonConfiguration.getDefaultInstance().getValue("tick_random_block").getAsBoolean(),
                         () -> JsonConfiguration.getUserInstance().getValue("tick_random_block").getAsBoolean(),
                         value -> JsonConfiguration.getUserInstance().setValue("tick_random_block", value)
                 )
-                .controller(booleanOption -> new BooleanController(booleanOption, ENABLED_DISABLED, false))
+                .controller(booleanOption -> new TickBoxController(booleanOption))
                 .build();
     }
     
@@ -172,78 +159,85 @@ public class ClientConfiguration implements ModMenuApi {
                         () -> JsonConfiguration.getUserInstance().getValue("tick_snow_accumulation").getAsBoolean(),
                         value -> JsonConfiguration.getUserInstance().setValue("tick_snow_accumulation", value)
                 )
-                .controller(booleanOption -> new BooleanController(booleanOption, ENABLED_DISABLED, false))
+                .controller(booleanOption -> new TickBoxController(booleanOption))
                 .build();
     }
     
     private static Option<Boolean> tickIceFreezing() {
         return Option.createBuilder(boolean.class)
                 .name(Text.literal("Tick Ice Freezing"))
-                .tooltip(Text.literal("Water will attempt to turn into ice faster in cold biomes when sleeping"))
+                .tooltip(Text.literal("Water will attempt to turn into ice faster in cold biomes when sleeping."))
                 .binding(
                         JsonConfiguration.getDefaultInstance().getValue("tick_ice_freezing").getAsBoolean(),
                         () -> JsonConfiguration.getUserInstance().getValue("tick_ice_freezing").getAsBoolean(),
                         value -> JsonConfiguration.getUserInstance().setValue("tick_ice_freezing", value)
                 )
-                .controller(booleanOption -> new BooleanController(booleanOption, ENABLED_DISABLED, false))
+                .controller(booleanOption -> new TickBoxController(booleanOption))
                 .build();
     }
     
     private static Option<Boolean> tickLightning() {
         return Option.createBuilder(boolean.class)
                 .name(Text.literal("Tick Lightning"))
-                .tooltip(Text.literal("Lightning will attempt to strike more often while sleeping."))
+                .tooltip(Text.literal("During a thunderstorm, lightning will attempt to strike more often while asleep."))
                 .binding(
                         JsonConfiguration.getDefaultInstance().getValue("tick_lightning").getAsBoolean(),
                         () -> JsonConfiguration.getUserInstance().getValue("tick_lightning").getAsBoolean(),
                         value -> JsonConfiguration.getUserInstance().setValue("tick_lightning", value)
                 )
-                .controller(booleanOption -> new BooleanController(booleanOption, ENABLED_DISABLED, false))
+                .controller(booleanOption -> new TickBoxController(booleanOption))
                 .build();
     }
     
-    private static Option<Boolean> tickEntities() {
+    private static Option<Boolean> tickMonsters() {
         return Option.createBuilder(boolean.class)
-                .name(Text.literal("Tick Entities"))
-                .tooltip(
-                        Text.literal("Animals and mobs will move and try to do actions more often during the night."),
-                        Text.literal("This option can cause lots of lag when enabled, especially at higher render distances.").formatted(Formatting.ITALIC)
-                )
+                .name(Text.literal("Tick Monsters"))
+                .tooltip(Text.literal("Hostile mobs will move faster and do more actions while sleeping."))
                 .binding(
-                        JsonConfiguration.getDefaultInstance().getValue("tick_entities").getAsBoolean(),
-                        () -> JsonConfiguration.getUserInstance().getValue("tick_entities").getAsBoolean(),
-                        value -> JsonConfiguration.getUserInstance().setValue("tick_entities", value)
+                        JsonConfiguration.getDefaultInstance().getValue("tick_monsters").getAsBoolean(),
+                        () -> JsonConfiguration.getUserInstance().getValue("tick_monsters").getAsBoolean(),
+                        value -> JsonConfiguration.getUserInstance().setValue("tick_monsters", value)
                 )
-                .controller(booleanOption -> new BooleanController(booleanOption, ENABLED_DISABLED, false))
+                .controller(booleanOption -> new TickBoxController(booleanOption))
                 .build();
     }
     
-    private static Option<Boolean> tickMobSpawn() {
-        return Option.createBuilder(boolean.class)
-                .name(Text.literal("Tick Natural Mob Spawn"))
-                .tooltip(
-                        Text.literal("Peaceful and hostile mobs will attempt to spawn at an increased rate through the night."),
-                        Text.literal("This option can cause lots of lag when enabled, especially at higher render distances.").formatted(Formatting.ITALIC)
-                )
+    private static Option<Double> monsterTickMultiplier() {
+        return Option.createBuilder(double.class)
+                .name(Text.literal("Monster Tick Multiplier"))
+                .tooltip(Text.literal("Scales the amount of times hostile mobs are ticked."))
                 .binding(
-                        JsonConfiguration.getDefaultInstance().getValue("tick_mob_spawn").getAsBoolean(),
-                        () -> JsonConfiguration.getUserInstance().getValue("tick_mob_spawn").getAsBoolean(),
-                        value -> JsonConfiguration.getUserInstance().setValue("tick_mob_spawn", value)
+                        JsonConfiguration.getDefaultInstance().getValue("monster_tick_multiplier").getAsDouble(),
+                        () -> JsonConfiguration.getUserInstance().getValue("monster_tick_multiplier").getAsDouble(),
+                        value -> JsonConfiguration.getUserInstance().setValue("monster_tick_multiplier", value)
                 )
-                .controller(booleanOption -> new BooleanController(booleanOption, ENABLED_DISABLED, false))
+                .controller(doubleOption -> new DoubleSliderController(doubleOption, 0.1, 1.0, 0.05))
                 .build();
     }
     
-    private static Option<Boolean> tickSpawners() {
+    private static Option<Boolean> tickAnimals() {
         return Option.createBuilder(boolean.class)
-                .name(Text.literal("Tick Spawners"))
-                .tooltip(Text.literal("Spawner blocks will attempt to spawn a entity more often when sleeping."))
+                .name(Text.literal("Tick Animals"))
+                .tooltip(Text.literal("Passive animals will move faster and do more actions while sleeping."))
                 .binding(
-                        JsonConfiguration.getDefaultInstance().getValue("tick_spawners").getAsBoolean(),
-                        () -> JsonConfiguration.getUserInstance().getValue("tick_spawners").getAsBoolean(),
-                        value -> JsonConfiguration.getUserInstance().setValue("tick_spawners", value)
+                        JsonConfiguration.getDefaultInstance().getValue("tick_animals").getAsBoolean(),
+                        () -> JsonConfiguration.getUserInstance().getValue("tick_animals").getAsBoolean(),
+                        value -> JsonConfiguration.getUserInstance().setValue("tick_animals", value)
                 )
-                .controller(booleanOption -> new BooleanController(booleanOption, ENABLED_DISABLED, false))
+                .controller(booleanOption -> new TickBoxController(booleanOption))
+                .build();
+    }
+    
+    private static Option<Double> animalTickMultiplier() {
+        return Option.createBuilder(double.class)
+                .name(Text.literal("Animal Tick Multiplier"))
+                .tooltip(Text.literal("Scales the amount of times animals are ticked."))
+                .binding(
+                        JsonConfiguration.getDefaultInstance().getValue("animal_tick_multiplier").getAsDouble(),
+                        () -> JsonConfiguration.getUserInstance().getValue("animal_tick_multiplier").getAsDouble(),
+                        value -> JsonConfiguration.getUserInstance().setValue("animal_tick_multiplier", value)
+                )
+                .controller(doubleOption -> new DoubleSliderController(doubleOption, 0.1, 1.0, 0.05))
                 .build();
     }
 }

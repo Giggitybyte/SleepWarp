@@ -1,8 +1,6 @@
 package me.thegiggitybyte.sleepwarp;
 
 import me.thegiggitybyte.sleepwarp.config.JsonConfiguration;
-import me.thegiggitybyte.sleepwarp.utility.TickMonitor;
-import me.thegiggitybyte.sleepwarp.utility.WarpDrive;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.entity.event.v1.EntitySleepEvents;
@@ -14,11 +12,9 @@ public class SleepWarp {
         @Override
         public void onInitialize() {
             JsonConfiguration.getUserInstance();
-            TickMonitor.initialize();
             Commands.register();
             
-            ServerTickEvents.END_WORLD_TICK.register(WarpDrive::tryJump);
-            
+            ServerTickEvents.END_WORLD_TICK.register(WarpDrive::engage);
             EntitySleepEvents.ALLOW_SLEEP_TIME.register((player, sleepingPos, vanillaResult) -> {
                 if (vanillaResult == false && (player.getWorld().getTimeOfDay() % 24000 > 12542))
                     return ActionResult.SUCCESS;

@@ -1,7 +1,8 @@
 accessWidener v1 named
 
 # World
-accessible method net/minecraft/world/World tickBlockEntities ()V
+accessible field net/minecraft/world/World pendingBlockEntityTickers Ljava/util/List;
+accessible field net/minecraft/world/World blockEntityTickers Ljava/util/List;
 
 # ServerWorld
 accessible field net/minecraft/server/world/ServerWorld entityManager Lnet/minecraft/server/world/ServerEntityManager;
@@ -11,7 +12,6 @@ accessible field net/minecraft/server/world/ServerWorld inBlockTick Z
 accessible method net/minecraft/server/world/ServerWorld tickWeather ()V
 accessible method net/minecraft/server/world/ServerWorld tickTime ()V
 accessible method net/minecraft/server/world/ServerWorld resetWeather ()V
-accessible method net/minecraft/server/world/ServerWorld processSyncedBlockEvents ()V
 accessible method net/minecraft/server/world/ServerWorld wakeSleepingPlayers ()V
 accessible method net/minecraft/server/world/ServerWorld shouldCancelSpawn (Lnet/minecraft/entity/Entity;)Z
 accessible method net/minecraft/server/world/ServerWorld getLightningPos (Lnet/minecraft/util/math/BlockPos;)Lnet/minecraft/util/math/BlockPos;
@@ -19,4 +19,3 @@ accessible method net/minecraft/server/world/ServerWorld getLightningPos (Lnet/m
 # ThreadedAnvilChunkStorage
 accessible method net/minecraft/server/world/ThreadedAnvilChunkStorage entryIterator ()Ljava/lang/Iterable;
 accessible method net/minecraft/server/world/ThreadedAnvilChunkStorage shouldTick (Lnet/minecraft/util/math/ChunkPos;)Z
-accessible method net/minecraft/server/world/ThreadedAnvilChunkStorage tickEntityMovement ()V

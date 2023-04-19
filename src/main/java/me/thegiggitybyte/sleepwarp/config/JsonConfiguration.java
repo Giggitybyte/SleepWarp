@@ -26,15 +26,15 @@ public class JsonConfiguration {
         defaultJson.addProperty("player_multiplier", 0.6);
         defaultJson.addProperty("action_bar_messages", true);
         defaultJson.addProperty("use_sleep_percentage", false);
-        defaultJson.addProperty("performance_mode", false);
         defaultJson.addProperty("tick_block_entities", true);
         defaultJson.addProperty("tick_random_block", true);
         defaultJson.addProperty("tick_snow_accumulation", true);
         defaultJson.addProperty("tick_ice_freezing", true);
         defaultJson.addProperty("tick_lightning", true);
-        defaultJson.addProperty("tick_entities", false);
-        defaultJson.addProperty("tick_mob_spawn", false);
-        defaultJson.addProperty("tick_spawners", false);
+        defaultJson.addProperty("tick_monsters", false);
+        defaultJson.addProperty("tick_animals", false);
+        defaultJson.addProperty("monster_tick_multiplier", 1.0);
+        defaultJson.addProperty("animal_tick_multiplier", 1.0);
         
         DEFAULT_INSTANCE = new JsonConfiguration();
         DEFAULT_INSTANCE.jsonObject = defaultJson;
