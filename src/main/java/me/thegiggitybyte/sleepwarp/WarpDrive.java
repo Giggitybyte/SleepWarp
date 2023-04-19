@@ -156,22 +156,11 @@ public class WarpDrive {
             }
         }
         
-        boolean canTickRandomBlock = JsonConfiguration.getUserInstance().getValue("tick_random_block").getAsBoolean();
-        boolean canTickAnimals = JsonConfiguration.getUserInstance().getValue("tick_animals").getAsBoolean();
-        boolean canTickMonsters = JsonConfiguration.getUserInstance().getValue("tick_monsters").getAsBoolean();
-        boolean canTickBlockEntities = JsonConfiguration.getUserInstance().getValue("tick_block_entities").getAsBoolean();
-        boolean canTickLightning = JsonConfiguration.getUserInstance().getValue("tick_lightning").getAsBoolean();
-        
-        var entities = new ArrayList<MobEntity>();
-        if (canTickAnimals | canTickMonsters) {
-            world.entityList.forEach(entity -> {
-                if (entity.isRemoved()) return;
-                if (canTickAnimals && entity instanceof AnimalEntity animal) entities.add(animal);
-                if (canTickMonsters && entity instanceof HostileEntity monster) entities.add(monster);
-            });
-        }
-        
+        var canTickRandomBlock = JsonConfiguration.getUserInstance().getValue("tick_random_block").getAsBoolean();
+        var canTickBlockEntities = JsonConfiguration.getUserInstance().getValue("tick_block_entities").getAsBoolean();
+        var canTickLightning = JsonConfiguration.getUserInstance().getValue("tick_lightning").getAsBoolean();
         var random = Random.create();
+        
         for (var tick = 0; tick < tickCount; tick++) {
             Collections.shuffle(chunks);
             
@@ -184,8 +173,38 @@ public class WarpDrive {
                 if (random.nextInt(16) == 0) CompletableFuture.runAsync(() -> tickPrecipitation(world, chunk), TICK_EXECUTOR);
             }
             
-            if (canTickAnimals | canTickMonsters) CompletableFuture.runAsync(() -> tickMobs(world, entities), MOB_TICK_EXECUTOR);
             if (canTickBlockEntities) CompletableFuture.runAsync(() -> tickBlockEntities(world), TICK_EXECUTOR);
+        }
+        
+        boolean canTickAnimals = JsonConfiguration.getUserInstance().getValue("tick_animals").getAsBoolean();
+        boolean canTickMonsters = JsonConfiguration.getUserInstance().getValue("tick_monsters").getAsBoolean();
+        
+        if (canTickAnimals | canTickMonsters) {
+            var animals = new ArrayList<MobEntity>();
+            var monsters = new ArrayList<MobEntity>();
+            
+            world.entityList.forEach(entity -> {
+                if (entity.isRemoved()) return;
+                
+                if (canTickAnimals && entity instanceof AnimalEntity animal)
+                    animals.add(animal);
+                else if (canTickMonsters && entity instanceof HostileEntity monster)
+                    monsters.add(monster);
+            });
+            
+            if (canTickAnimals) {
+                var animalTickMultiplier = JsonConfiguration.getUserInstance().getValue("animal_tick_multiplier").getAsDouble();
+                for (var tick = 0; tick < tickCount * animalTickMultiplier; tick++) {
+                    CompletableFuture.runAsync(() -> tickMobs(world, animals), MOB_TICK_EXECUTOR);
+                }
+            }
+            
+            if (canTickMonsters) {
+                var monsterTickMultiplier = JsonConfiguration.getUserInstance().getValue("monster_tick_multiplier").getAsDouble();
+                for (var tick = 0; tick < tickCount * monsterTickMultiplier; tick++) {
+                    CompletableFuture.runAsync(() -> tickMobs(world, monsters), MOB_TICK_EXECUTOR);
+                }
+            }
         }
     }
     

@@ -22,7 +22,7 @@ public class JsonConfiguration {
     static {
         var defaultJson = new JsonObject();
         
-        defaultJson.addProperty("max_ticks_added", 60);
+        defaultJson.addProperty("max_ticks_added", 40);
         defaultJson.addProperty("player_multiplier", 0.6);
         defaultJson.addProperty("action_bar_messages", true);
         defaultJson.addProperty("use_sleep_percentage", false);
@@ -33,8 +33,8 @@ public class JsonConfiguration {
         defaultJson.addProperty("tick_lightning", true);
         defaultJson.addProperty("tick_monsters", false);
         defaultJson.addProperty("tick_animals", false);
-        defaultJson.addProperty("monster_tick_multiplier", 1.0);
-        defaultJson.addProperty("animal_tick_multiplier", 1.0);
+        defaultJson.addProperty("monster_tick_multiplier", 0.25);
+        defaultJson.addProperty("animal_tick_multiplier", 0.25);
         
         DEFAULT_INSTANCE = new JsonConfiguration();
         DEFAULT_INSTANCE.jsonObject = defaultJson;
