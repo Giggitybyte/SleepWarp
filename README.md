@@ -1,6 +1,6 @@
 # SleepWarp 
 
-[![Fabric Mod](https://img.shields.io/badge/modloader-fabric-informational)](https://fabricmc.net/use/) [![GitHub Release](https://img.shields.io/github/v/release/Giggitybyte/SleepWarp?include_prereleases)](https://github.com/Giggitybyte/SleepWarp/releases) [![Curseforge Download](https://cf.way2muchnoise.eu/full_579295_downloads.svg)](https://www.curseforge.com/minecraft/mc-mods/sleep-warp/files/all) [![Modrinth Download](https://is.gd/DAV5Ic)](https://modrinth.com/mod/sleep-warp/versions) [![Discord Server](https://img.shields.io/discord/385375030755983372.svg?label=discord)](https://discord.gg/UPKuVWgU4G)
+[![Fabric Mod](https://img.shields.io/badge/modloader-fabric-informational)](https://fabricmc.net/use/) [![GitHub Release](https://img.shields.io/github/v/release/Giggitybyte/SleepWarp?include_prereleases)](https://github.com/Giggitybyte/SleepWarp/releases) [![Curseforge Download](https://cf.way2muchnoise.eu/full_579295_downloads.svg)](https://www.curseforge.com/minecraft/mc-mods/sleep-warp/files/all) [![Modrinth Download](https://img.shields.io/modrinth/dt/sleep-warp?label=modrinth&logo=modrinth)](https://modrinth.com/mod/sleep-warp/versions) [![Discord Server](https://img.shields.io/discord/385375030755983372.svg?label=discord)](https://discord.gg/UPKuVWgU4G)
 
 **Instead of skipping directly to day when sleeping, time will speed up based on how many players are sleeping.**
 
