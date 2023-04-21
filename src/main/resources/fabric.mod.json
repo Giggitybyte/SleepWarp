@@ -43,13 +43,13 @@
 	"accessWidener": "sleepwarp.accesswidener",
 
 	"depends" : {
-		"fabric": ">=0.76.0+1.19.4",
+		"fabric": ">=0.76.0+1.19.2",
 		"fabricloader" : ">=0.13.0",
-		"minecraft": ">=1.19.4"
+		"minecraft": "1.19.2"
 	},
 
 	"recommends": {
-		"modmenu": "6.1.0-rc.4",
-		"yet-another-config-lib": "2.4.0"
+		"modmenu": "4.2.0-beta.2",
+		"yet-another-config-lib": "2.2.0-for-1.19.2"
 	}
 }

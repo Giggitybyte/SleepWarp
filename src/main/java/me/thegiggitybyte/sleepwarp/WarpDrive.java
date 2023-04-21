@@ -220,22 +220,24 @@ public class WarpDrive {
             if (JsonConfiguration.getUserInstance().getValue("tick_snow_accumulation").getAsBoolean())
                 tickSnowAccumulation(world, biome, topBlockPos);
             
-            var precipitation = biome.getPrecipitation(topBlockPos.down());
-            if (precipitation != Biome.Precipitation.NONE) {
-                var blockState = world.getBlockState(topBlockPos.down());
-                blockState.getBlock().precipitationTick(blockState, world, topBlockPos.down(), precipitation);
+            var precipitation = biome.getPrecipitation();
+            var blockState = world.getBlockState(topBlockPos.down());
+            
+            if (precipitation == Biome.Precipitation.RAIN && biome.isCold(topBlockPos.down())) {
+                precipitation = Biome.Precipitation.SNOW;
             }
+            
+            blockState.getBlock().precipitationTick(blockState, world, topBlockPos.down(), precipitation);
         }
     }
     
     private static void tickSnowAccumulation(final ServerWorld world, final Biome biome, final BlockPos blockPos) {
-        var layerHeight = world.getGameRules().getInt(GameRules.SNOW_ACCUMULATION_HEIGHT);
-        if (layerHeight == 0 || biome.canSetSnow(world, blockPos) == false) return;
+        if (biome.canSetSnow(world, blockPos) == false) return;
         
         var blockState = world.getBlockState(blockPos);
         if (blockState.isOf(Blocks.SNOW)) {
             int snowLayers = blockState.get(SnowBlock.LAYERS);
-            if (snowLayers < Math.min(layerHeight, 8)) {
+            if (snowLayers < SnowBlock.MAX_LAYERS) {
                 var layerBlockState = blockState.with(SnowBlock.LAYERS, snowLayers + 1);
                 Block.pushEntitiesUpBeforeBlockChange(blockState, layerBlockState, world, blockPos);
                 world.setBlockState(blockPos, layerBlockState);
