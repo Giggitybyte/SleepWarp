@@ -57,7 +57,7 @@ public class Commands {
                 .append(" players sleeping: ")
                 .append(playerText);
         
-        ctx.getSource().sendFeedback(messageText, false);
+        ctx.getSource().sendFeedback(() -> messageText, false);
         return Command.SINGLE_SUCCESS;
     }
     
@@ -116,8 +116,9 @@ public class Commands {
                     .append(Text.literal(keyString + " set to ").formatted(Formatting.WHITE))
                     .append(Text.literal(setValueString).formatted(Formatting.YELLOW));
         }
-        
-        ctx.getSource().sendFeedback(messageText, false);
+
+        MutableText finalMessageText = messageText;
+        ctx.getSource().sendFeedback(() -> finalMessageText, false);
         return Command.SINGLE_SUCCESS;
     }
     

@@ -16,7 +16,7 @@ public class SleepWarp {
             
             ServerTickEvents.END_WORLD_TICK.register(WarpDrive::engage);
             EntitySleepEvents.ALLOW_SLEEP_TIME.register((player, sleepingPos, vanillaResult) -> {
-                if (vanillaResult == false && (player.getWorld().getTimeOfDay() % 24000 > 12542))
+                if (!vanillaResult && (player.getWorld().getTimeOfDay() % 24000 > 12542))
                     return ActionResult.SUCCESS;
                 else
                     return ActionResult.PASS;
