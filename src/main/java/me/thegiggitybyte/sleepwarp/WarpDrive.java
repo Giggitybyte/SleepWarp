@@ -17,6 +17,7 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.world.GameRules;
@@ -306,10 +307,14 @@ public class WarpDrive {
         var random = Random.create();
         var startX = chunk.getPos().getStartX();
         var startZ = chunk.getPos().getStartZ();
+        
+        var sectionIndex = 0;
         for (ChunkSection chunkSection : chunk.getSectionArray()) {
             if (chunkSection.hasRandomTicks() == false) continue;
             
-            var startY = chunkSection.getYOffset();
+            var bottomY = chunk.sectionIndexToCoord(sectionIndex++);
+            var startY = ChunkSectionPos.getBlockCoord(bottomY);
+            
             for (int tick = 0; tick < tickCount; ++tick) {
                 var blockPos = world.getRandomPosInChunk(startX, startY, startZ, 15);
                 var blockState = chunkSection.getBlockState(blockPos.getX() - startX, blockPos.getY() - startY, blockPos.getZ() - startZ);

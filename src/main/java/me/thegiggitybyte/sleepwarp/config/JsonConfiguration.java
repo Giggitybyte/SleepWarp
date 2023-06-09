@@ -140,4 +140,5 @@ public class JsonConfiguration {
             throw new RuntimeException(e);
         }
     }
+
 }
