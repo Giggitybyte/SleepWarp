@@ -50,6 +50,6 @@
 
 	"recommends": {
 		"modmenu": "7.0.1",
-		"yet-another-config-lib": "3.0.0"
+		"yet-another-config-lib": "3.0.1"
 	}
 }
