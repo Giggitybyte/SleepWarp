@@ -1,0 +1,50 @@
+{
+  "schemaVersion" : 1,
+
+  "id" : "sleepwarp",
+  "version" : "${version}",
+  "environment" : "*",
+
+  "name" : "SleepWarp",
+  "description" : "Accelerates time when sleeping instead of skipping directly to day.",
+  "license": "MPL 2.0",
+
+  "authors": [ "thegiggitybyte" ],
+  "icon":  "assets/sleepwarp/icon.png",
+  "contact": {
+    "homepage": "https://modrinth.com/mod/sleep-warp",
+    "sources": "https://github.com/Giggitybyte/SleepWarp",
+    "issues": "https://github.com/Giggitybyte/SleepWarp/issues"
+  },
+
+  "custom": {
+    "modmenu": {
+      "links": {
+        "Modrinth": "https://modrinth.com/mod/sleep-warp",
+        "CurseForge": "https://www.curseforge.com/minecraft/mc-mods/sleep-warp",
+        "modmenu.discord": "https://discord.gg/UPKuVWgU4G"
+      }
+    }
+  },
+
+  "entrypoints": {
+    "main": [
+      "me.thegiggitybyte.sleepwarp.fabric.SleepWarpFabric"
+    ],
+
+    "modmenu": [
+      "me.thegiggitybyte.sleepwarp.fabriclike.ModMenuImpl"
+    ]
+  },
+
+  "depends": {
+    "fabric": "*",
+    "minecraft": ">=1.19.4",
+    "architectury": ">=8.1.79"
+  },
+
+  "recommends": {
+    "modmenu": "7.0.1",
+    "yet-another-config-lib": "3.0.1"
+  }
+}
