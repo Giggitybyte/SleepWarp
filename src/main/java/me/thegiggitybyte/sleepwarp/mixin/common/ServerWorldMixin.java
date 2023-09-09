@@ -32,8 +32,8 @@ public abstract class ServerWorldMixin extends World {
     
     @Redirect(method = "updateSleepingPlayers", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/world/ServerWorld;sendSleepingStatus()V"))
     private void sendWarpStatus(ServerWorld world) {
-        if (world.getServer().isSingleplayer() || world.getServer().isRemote() == false || world.getPlayers().size() == 1) return;
-        if (JsonConfiguration.getUserInstance().getValue("action_bar_messages").getAsBoolean() == false) return;
+        if (world.getServer().isSingleplayer() || !world.getServer().isRemote() || world.getPlayers().size() == 1) return;
+        if (!JsonConfiguration.getUserInstance().getValue("action_bar_messages").getAsBoolean()) return;
         
         long playerCount = 0, inBedCount = 0, sleepingCount = 0;
         

@@ -11,6 +11,7 @@ import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.mob.SkeletonHorseEntity;
 import net.minecraft.entity.passive.AnimalEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.packet.s2c.play.WorldTimeUpdateS2CPacket;
 import net.minecraft.server.world.ChunkHolder;
 import net.minecraft.server.world.ServerWorld;
@@ -19,17 +20,16 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.random.Random;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.chunk.BlockEntityTickInvoker;
-import net.minecraft.world.chunk.ChunkSection;
 import net.minecraft.world.chunk.WorldChunk;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -45,8 +45,8 @@ public class WarpDrive {
     static {
         DAY_LENGTH_TICKS = 24000;
         TICK_EXECUTOR = Executors.newSingleThreadExecutor();
-        RANDOM_TICK_EXECUTOR = Executors.newSingleThreadExecutor();
         MOB_TICK_EXECUTOR = Executors.newSingleThreadExecutor();
+        RANDOM_TICK_EXECUTOR = Executors.newFixedThreadPool(4);
     }
     
     /**
@@ -56,7 +56,7 @@ public class WarpDrive {
     static void engage(final ServerWorld world) {
         // Pre-warp checks.
         var totalPlayers = world.getPlayers().size();
-        var sleepingPlayers = world.getPlayers().stream().filter(player -> player.canResetTimeBySleeping()).count();
+        var sleepingPlayers = world.getPlayers().stream().filter(PlayerEntity::canResetTimeBySleeping).count();
         if (sleepingPlayers == 0) return;
         
         if (JsonConfiguration.getUserInstance().getValue("use_sleep_percentage").getAsBoolean()) {
@@ -108,7 +108,7 @@ public class WarpDrive {
         }
         
         // Send update message.
-        if (JsonConfiguration.getUserInstance().getValue("action_bar_messages").getAsBoolean() == false) return;
+        if (!JsonConfiguration.getUserInstance().getValue("action_bar_messages").getAsBoolean()) return;
         
         var actionBarText = Text.empty().formatted(Formatting.WHITE);
         if (currentWorldTime > 0) {
@@ -160,7 +160,7 @@ public class WarpDrive {
         var canTickRandomBlock = JsonConfiguration.getUserInstance().getValue("tick_random_block").getAsBoolean();
         var canTickBlockEntities = JsonConfiguration.getUserInstance().getValue("tick_block_entities").getAsBoolean();
         var canTickLightning = JsonConfiguration.getUserInstance().getValue("tick_lightning").getAsBoolean();
-        var random = Random.create();
+        var random = new Random();
         
         for (var tick = 0; tick < tickCount; tick++) {
             Collections.shuffle(chunks);
@@ -231,7 +231,7 @@ public class WarpDrive {
     
     private static void tickSnowAccumulation(final ServerWorld world, final Biome biome, final BlockPos blockPos) {
         var layerHeight = world.getGameRules().getInt(GameRules.SNOW_ACCUMULATION_HEIGHT);
-        if (layerHeight == 0 || biome.canSetSnow(world, blockPos) == false) return;
+        if (layerHeight == 0 || !biome.canSetSnow(world, blockPos)) return;
         
         var blockState = world.getBlockState(blockPos);
         if (blockState.isOf(Blocks.SNOW)) {
@@ -251,10 +251,10 @@ public class WarpDrive {
         
         for (MobEntity entity : entities) {
             world.getServer().submit(() -> {
-                if (entity.isRemoved() || world.shouldCancelSpawn(entity) | world.shouldTickEntity(entity.getBlockPos()) == false) return;
+                if (entity.isRemoved() || world.shouldCancelSpawn(entity) | !world.shouldTickEntity(entity.getBlockPos())) return;
                 
                 Entity entityVehicle = entity.getVehicle();
-                if (entityVehicle != null && (entityVehicle.isRemoved() || entityVehicle.hasPassenger(entity) == false)) {
+                if (entityVehicle != null && (entityVehicle.isRemoved() || !entityVehicle.hasPassenger(entity))) {
                     entity.stopRiding();
                 }
                 
@@ -280,7 +280,7 @@ public class WarpDrive {
         
         var canSpawnMobs = world.getGameRules().getBoolean(GameRules.DO_MOB_SPAWNING);
         var localDifficulty = world.getLocalDifficulty(blockPos).getLocalDifficulty() * 0.01;
-        boolean skeletonHorseSpawn = canSpawnMobs && (Random.create().nextDouble() < localDifficulty) && !world.getBlockState(blockPos.down()).isOf(Blocks.LIGHTNING_ROD);
+        boolean skeletonHorseSpawn = canSpawnMobs && (new Random().nextDouble() < localDifficulty) && !world.getBlockState(blockPos.down()).isOf(Blocks.LIGHTNING_ROD);
         
         if (skeletonHorseSpawn) {
             SkeletonHorseEntity skeletonHorseEntity = EntityType.SKELETON_HORSE.create(world);
@@ -304,23 +304,24 @@ public class WarpDrive {
         var tickCount = world.getGameRules().getInt(GameRules.RANDOM_TICK_SPEED);
         if (tickCount == 0) return;
         
-        var random = Random.create();
+        var random = net.minecraft.util.math.random.Random.create();
         var startX = chunk.getPos().getStartX();
         var startZ = chunk.getPos().getStartZ();
         
-        var sectionIndex = 0;
-        for (ChunkSection chunkSection : chunk.getSectionArray()) {
-            if (chunkSection.hasRandomTicks() == false) continue;
+        var chunkSections = chunk.getSectionArray();
+        for (var sectionIndex = 0; sectionIndex < chunkSections.length; ++sectionIndex) {
+            var chunkSection = chunkSections[sectionIndex];
+            if (!chunkSection.hasRandomTicks()) continue;
             
-            var bottomY = chunk.sectionIndexToCoord(sectionIndex++);
-            var startY = ChunkSectionPos.getBlockCoord(bottomY);
+            var sectionCoordinate = chunk.sectionIndexToCoord(sectionIndex);
+            var startY = ChunkSectionPos.getBlockCoord(sectionCoordinate);
             
-            for (int tick = 0; tick < tickCount; ++tick) {
+            for(int tick = 0; tick < tickCount; ++tick) {
                 var blockPos = world.getRandomPosInChunk(startX, startY, startZ, 15);
-                var blockState = chunkSection.getBlockState(blockPos.getX() - startX, blockPos.getY() - startY, blockPos.getZ() - startZ);
-                if (blockState.hasRandomTicks()) blockState.randomTick(world, blockPos, random);
-                
+                var blockState = chunkSection.getBlockState(blockPos.getX() - startX , blockPos.getY() - startY, blockPos.getZ() - startZ);
                 var fluidState = blockState.getFluidState();
+                
+                if (blockState.hasRandomTicks()) blockState.randomTick(world, blockPos, random);
                 if (fluidState.hasRandomTicks()) fluidState.onRandomTick(world, blockPos, random);
             }
         }
