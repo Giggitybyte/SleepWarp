@@ -1,6 +1,7 @@
 accessWidener v1 named
 
 # World
+accessible field net/minecraft/world/World iteratingTickingBlockEntities Z
 accessible field net/minecraft/world/World pendingBlockEntityTickers Ljava/util/List;
 accessible field net/minecraft/world/World blockEntityTickers Ljava/util/List;
 
