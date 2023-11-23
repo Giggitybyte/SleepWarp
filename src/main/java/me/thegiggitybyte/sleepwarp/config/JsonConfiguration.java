@@ -56,7 +56,7 @@ public class JsonConfiguration {
         try {
             if (Files.exists(filePath)) {
                 var jsonString = Files.readString(filePath);
-                if (jsonString.isEmpty() == false) {
+                if (!jsonString.isEmpty()) {
                     USER_INSTANCE.jsonObject = JsonParser.parseString(jsonString).getAsJsonObject();
                 }
             } else {
@@ -116,7 +116,7 @@ public class JsonConfiguration {
             var key = entry.getKey();
             var value = entry.getValue();
             
-            if (this.jsonObject.has(key) == false || this.jsonObject.get(key).isJsonPrimitive() == false) {
+            if (!this.jsonObject.has(key) || !this.jsonObject.get(key).isJsonPrimitive()) {
                 jsonObject.add(key, value);
             }
         }
